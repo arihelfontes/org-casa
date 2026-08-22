@@ -397,6 +397,7 @@ let state = {
   weekKey: null,
   assignments: null, // {0:[{taskId,name,effort,person,done,category,minutes}], ...}
   theme: { paper: "#EDEFE8", ink: "#233229", person0: "#3F7D6E", person1: "#B15C68" },
+  history: [], // {id, date:'YYYY-MM-DD', person, effort, category, name} — um item por tarefa concluída
 };
 
 function hexToRgb(hex){
@@ -503,6 +504,7 @@ function migrateState(){
   if(!state.categories || state.categories.length===0){
     state.categories = DEFAULT_CATEGORIES.map(c=>({...c}));
   }
+  if(!Array.isArray(state.history)) state.history = [];
   (state.tasks||[]).forEach(t=>{
     if(!t.category) t.category = 'geral';
     if(t.minutes==null) t.minutes = 15;
@@ -684,7 +686,16 @@ function renderDays(){
   el.querySelectorAll('[data-act="toggle"]').forEach(elx=>{
     elx.addEventListener('click', ()=>{
       const d = +elx.dataset.day, i = +elx.dataset.idx;
-      state.assignments[d][i].done = !state.assignments[d][i].done;
+      const t = state.assignments[d][i];
+      t.done = !t.done;
+      if(t.done){
+        const id = 'h' + Date.now() + '-' + Math.random().toString(36).slice(2,7);
+        state.history.push({ id, date: new Date().toISOString().slice(0,10), person: t.person, effort: t.effort, category: t.category, name: t.name });
+        t.historyId = id;
+      } else if(t.historyId){
+        state.history = state.history.filter(h=>h.id!==t.historyId);
+        delete t.historyId;
+      }
       renderDays(); renderStats(); scheduleSave();
     });
   });
@@ -698,6 +709,10 @@ function renderDays(){
   el.querySelectorAll('[data-act="skip"]').forEach(elx=>{
     elx.addEventListener('click', ()=>{
       const d = +elx.dataset.day, i = +elx.dataset.idx;
+      const t = state.assignments[d][i];
+      if(t && t.historyId){
+        state.history = state.history.filter(h=>h.id!==t.historyId);
+      }
       state.assignments[d].splice(i,1);
       renderDays(); renderStats(); scheduleSave();
     });
@@ -844,25 +859,81 @@ function computeStats(){
   return stats;
 }
 
+function computeHistoryStats(filterFn){
+  const stats = [{count:0, effort:0}, {count:0, effort:0}];
+  (state.history||[]).forEach(h=>{
+    if(!filterFn(h.date)) return;
+    const s = stats[h.person];
+    if(!s) return;
+    s.count += 1; s.effort += h.effort;
+  });
+  return stats;
+}
+
+let statsRange = 'week';
 function renderStats(){
   const box = document.getElementById('statsBox');
   if(!box) return;
-  const stats = computeStats();
-  const grandTotalEffort = Math.max(1, stats[0].totalEffort + stats[1].totalEffort);
-  box.innerHTML = [0,1].map(p=>{
+  box.innerHTML = `
+    <div class="subtabs" id="statsSubtabs">
+      <button class="subtab-btn ${statsRange==='week'?'on':''}" data-range="week">Semana</button>
+      <button class="subtab-btn ${statsRange==='month'?'on':''}" data-range="month">Mês</button>
+      <button class="subtab-btn ${statsRange==='year'?'on':''}" data-range="year">Ano</button>
+    </div>
+    <div id="statsContent"></div>
+  `;
+  box.querySelectorAll('#statsSubtabs .subtab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ statsRange = btn.dataset.range; renderStats(); });
+  });
+  renderStatsContent();
+}
+
+function renderStatsContent(){
+  const content = document.getElementById('statsContent');
+  if(!content) return;
+
+  if(statsRange==='week'){
+    const stats = computeStats();
+    const grandTotalEffort = Math.max(1, stats[0].totalEffort + stats[1].totalEffort);
+    content.innerHTML = [0,1].map(p=>{
+      const s = stats[p];
+      const pct = Math.round((s.totalEffort / grandTotalEffort) * 100);
+      const color = p===0 ? 'var(--teal)' : 'var(--rose)';
+      return `
+      <div class="stat-block">
+        <div class="stat-name" style="color:${color}">${escapeHtml(state.people[p])}</div>
+        <div class="stat-line">${s.done} de ${s.total} tarefas concluídas nesta semana</div>
+        <div class="stat-line">Carga desta semana: ${s.totalEffort} pts (${pct}% do total das duas)</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
+        <div class="stat-line" style="margin-top:8px;">Corações coletados (tarefas concluídas):</div>
+        <div class="hearts" style="color:${color}">${'♥'.repeat(s.doneEffort) || '—'}</div>
+      </div>`;
+    }).join('') + `<p class="hint">Cada coração = 1 ponto de dificuldade de uma tarefa marcada como feita. Esses números são só da semana atual — zeram quando vocês clicam em "Nova semana".</p>`;
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const filterFn = statsRange==='month'
+    ? (d)=> d.slice(0,7) === now.slice(0,7)
+    : (d)=> d.slice(0,4) === now.slice(0,4);
+  const periodLabel = statsRange==='month' ? 'neste mês' : 'neste ano';
+  const stats = computeHistoryStats(filterFn);
+  const grandTotal = Math.max(1, stats[0].effort + stats[1].effort);
+
+  content.innerHTML = [0,1].map(p=>{
     const s = stats[p];
-    const pct = Math.round((s.totalEffort / grandTotalEffort) * 100);
+    const pct = Math.round((s.effort / grandTotal) * 100);
     const color = p===0 ? 'var(--teal)' : 'var(--rose)';
+    const heartsCapped = '♥'.repeat(Math.min(s.effort, 30)) + (s.effort>30 ? ` +${s.effort-30}` : '');
     return `
     <div class="stat-block">
       <div class="stat-name" style="color:${color}">${escapeHtml(state.people[p])}</div>
-      <div class="stat-line">${s.done} de ${s.total} tarefas concluídas nesta semana</div>
-      <div class="stat-line">Carga desta semana: ${s.totalEffort} pts (${pct}% do total das duas)</div>
+      <div class="stat-line">${s.count} tarefas concluídas ${periodLabel}</div>
+      <div class="stat-line">${s.effort} pts coletados (${pct}% do total das duas)</div>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
-      <div class="stat-line" style="margin-top:8px;">Corações coletados (tarefas concluídas):</div>
-      <div class="hearts" style="color:${color}">${'♥'.repeat(s.doneEffort) || '—'}</div>
+      <div class="hearts" style="color:${color}">${s.effort>0 ? heartsCapped : '—'}</div>
     </div>`;
-  }).join('') + `<p class="hint">Cada coração = 1 ponto de dificuldade de uma tarefa marcada como feita. Esses números são só da semana atual — zeram quando vocês clicam em "Nova semana".</p>`;
+  }).join('') + `<p class="hint">Calculado a partir do histórico de tarefas concluídas — só conta a partir de agora (marcações feitas antes dessa atualização não entram).</p>`;
 }
 
 function escapeHtml(s){

@@ -92,10 +92,10 @@
   .btn-primary{background:var(--ink);color:var(--paper-card);}
   .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);}
 
-  /* effort dots */
-  .dots{display:inline-flex;gap:3px;vertical-align:middle;}
-  .dots span{width:5px;height:5px;border-radius:50%;background:var(--line);}
-  .dots span.on{background:var(--ink-soft);}
+  /* effort hearts */
+  .dots{display:inline-flex;gap:1px;vertical-align:middle;font-size:10px;line-height:1;}
+  .dots span{color:var(--line);}
+  .dots span.on{color:var(--mustard);}
 
   /* day sections */
   .day{
@@ -173,10 +173,41 @@
   }
   .bank.open{display:block;}
   .bank-item{
+    display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+    background:var(--paper-card);border:1px solid var(--line);
+    border-radius:12px;padding:8px 10px;margin-bottom:6px;
+  }
+  .day-toggles{display:flex;gap:3px;width:100%;order:99;margin-top:2px;}
+  .day-toggle{
+    flex:1;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:9.5px;
+    padding:5px 0;border-radius:6px;border:1px solid var(--line);background:#fff;
+    color:var(--ink-soft);cursor:pointer;user-select:none;
+  }
+  .day-toggle.on{background:var(--ink);color:var(--paper-card);border-color:var(--ink);}
+  .cat-item{
     display:flex;align-items:center;gap:8px;
     background:var(--paper-card);border:1px solid var(--line);
     border-radius:12px;padding:8px 10px;margin-bottom:6px;
   }
+  .cat-item input[type=text]{
+    flex:1;border:none;background:transparent;font-size:13.5px;color:var(--ink);
+    font-family:'Inter',sans-serif;min-width:0;
+  }
+  .cat-item input[type=color]{
+    width:34px;height:30px;border:1px solid var(--line);border-radius:7px;
+    background:none;padding:2px;flex:none;
+  }
+  .stat-block{
+    background:var(--paper-card);border:1px solid var(--line);border-radius:14px;
+    padding:12px 14px;margin-bottom:8px;
+  }
+  .stat-name{font-family:'Fraunces',serif;font-weight:600;font-size:15px;margin-bottom:6px;}
+  .stat-line{font-size:12.5px;color:var(--ink-soft);margin-bottom:6px;}
+  .hearts{font-size:14px;letter-spacing:1px;}
+  .bar-track{
+    background:var(--line);border-radius:100px;height:8px;overflow:hidden;margin-top:4px;
+  }
+  .bar-fill{height:100%;border-radius:100px;}
   .bank-item input[type=text]{
     flex:1;border:none;background:transparent;font-size:13.5px;color:var(--ink);
     font-family:'Inter',sans-serif;min-width:0;
@@ -201,6 +232,29 @@
     padding:9px 8px;border-radius:10px;border:1px solid var(--line);font-size:12px;
     font-family:'Inter',sans-serif;color:var(--ink-soft);background:#fff;
   }
+  .cat-dot{
+    width:10px;height:10px;border-radius:3px;flex:none;margin-right:2px;
+  }
+  .cat-chip{
+    font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:600;
+    padding:2px 6px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;
+    margin-right:6px;
+  }
+  .mins-badge{
+    font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-soft);
+  }
+  .cat-legend{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px;}
+  .week-summary{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);
+    margin:2px 0 0;
+  }
+  .subtabs{display:flex;gap:6px;margin-bottom:12px;}
+  .subtab-btn{
+    flex:1;background:transparent;border:1px solid var(--line);color:var(--ink-soft);
+    padding:8px 6px;border-radius:10px;font-size:12px;font-weight:600;
+  }
+  .subtab-btn.on{background:var(--ink);color:var(--paper-card);border-color:var(--ink);}
+  .subtab-panel{display:block;}
   .hint{font-size:11.5px;color:var(--ink-soft);margin:8px 2px 0;line-height:1.5;}
   .toast{
     position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
@@ -222,7 +276,7 @@
       <div class="person-pin p1"><span class="dot"></span><input id="name1" maxlength="16" /></div>
     </div>
     <div id="autosaveWarning" style="display:none;margin-top:12px;background:var(--rose-soft);color:var(--rose);border-radius:12px;padding:10px 12px;font-size:12px;font-weight:500;">
-      ⚠ Configure o banco de dados (Firebase) para ativar a sincronização entre vocês duas — veja as instruções enviadas junto com o arquivo. Enquanto isso, use o "Backup manual" para não perder suas alterações.
+      ⚠ Não consegui sincronizar agora — verifique sua conexão com a internet.
     </div>
   </header>
 
@@ -236,36 +290,63 @@
 
   <div id="days"></div>
 
-  <button class="bank-toggle" id="bankToggle">⚙ Gerenciar tarefas (adicionar, editar frequência/peso)</button>
-  <div class="bank" id="bank">
-    <div id="bankList"></div>
-    <div class="add-form">
-      <input type="text" id="newTaskName" placeholder="Nova tarefa (ex: limpar sofá)" />
-      <select id="newTaskFreq"></select>
-      <select id="newTaskEffort">
-        <option value="1">leve ●</option>
-        <option value="2" selected>médio ●●</option>
-        <option value="3">pesado ●●●</option>
-      </select>
-      <button class="btn-primary" id="btnAddTask">Adicionar</button>
+  <button class="bank-toggle" id="customizeToggle">⚙ Personalizar</button>
+  <div class="bank" id="customizeBox">
+    <div class="subtabs">
+      <button class="subtab-btn on" data-tab="theme">🎨 Cores</button>
+      <button class="subtab-btn" data-tab="cat">🏷️ Categorias</button>
+      <button class="subtab-btn" data-tab="tasks">📋 Tarefas</button>
     </div>
-    <p class="hint">Frequência define quantas vezes a tarefa aparece por semana (ou a cada quantas semanas). O peso (leve/médio/pesado) é usado para equilibrar a carga entre os dias e evitar empilhar tudo no sábado/domingo.</p>
+
+    <div class="subtab-panel" id="panel-theme">
+      <div class="add-form" style="align-items:center;">
+        <label style="font-size:12.5px;color:var(--ink-soft);flex:1;">Fundo do site
+          <input type="color" id="colorPaper" style="width:100%;height:34px;border:1px solid var(--line);border-radius:8px;background:none;padding:2px;" />
+        </label>
+        <label style="font-size:12.5px;color:var(--ink-soft);flex:1;">Cor de <span id="colorLabel0"></span>
+          <input type="color" id="colorPerson0" style="width:100%;height:34px;border:1px solid var(--line);border-radius:8px;background:none;padding:2px;" />
+        </label>
+        <label style="font-size:12.5px;color:var(--ink-soft);flex:1;">Cor de <span id="colorLabel1"></span>
+          <input type="color" id="colorPerson1" style="width:100%;height:34px;border:1px solid var(--line);border-radius:8px;background:none;padding:2px;" />
+        </label>
+      </div>
+      <div class="add-form">
+        <button class="btn-ghost" id="btnResetTheme">Restaurar cores originais</button>
+      </div>
+    </div>
+
+    <div class="subtab-panel" id="panel-cat" style="display:none;">
+      <div id="catList"></div>
+      <div class="add-form">
+        <input type="text" id="newCatName" placeholder="Nova categoria (ex: Área externa)" />
+        <input type="color" id="newCatColor" value="#7A8FA6" style="width:44px;height:38px;border:1px solid var(--line);border-radius:8px;background:none;padding:2px;" />
+        <button class="btn-primary" id="btnAddCat">Adicionar</button>
+      </div>
+      <p class="hint">A cor da categoria aparece como uma bolinha ao lado de cada tarefa. Se você excluir uma categoria, as tarefas que usavam ela voltam para "Geral".</p>
+    </div>
+
+    <div class="subtab-panel" id="panel-tasks" style="display:none;">
+      <div id="bankList"></div>
+      <div class="add-form">
+        <input type="text" id="newTaskName" placeholder="Nova tarefa (ex: limpar sofá)" />
+        <select id="newTaskFreq"></select>
+        <select id="newTaskEffort">
+          <option value="1">leve ♥</option>
+          <option value="2" selected>médio ♥♥</option>
+          <option value="3">pesado ♥♥♥</option>
+        </select>
+        <select id="newTaskCategory"></select>
+        <input type="number" id="newTaskMinutes" placeholder="min" min="1" style="width:60px;padding:9px 8px;border-radius:10px;border:1px solid var(--line);font-size:12.5px;" value="15" />
+        <button class="btn-primary" id="btnAddTask">Adicionar</button>
+      </div>
+      <p class="hint">Frequência define quantas vezes a tarefa aparece por semana (ou a cada quantas semanas). O peso é usado para equilibrar a carga entre os dias. Restrição de dias pode ser ajustada na lista acima.</p>
+    </div>
   </div>
 
-  <button class="bank-toggle" id="backupToggle">💾 Backup manual (o armazenamento automático está instável)</button>
-  <div class="bank" id="backupBox">
-    <p class="hint" style="margin-top:0;">O salvamento automático deste ambiente está apresentando erro. Use este backup manual: copie o texto abaixo e guarde (ex: no Notas do celular). Quando abrir o painel de novo, cole aqui e clique em "Carregar" para restaurar tudo.</p>
-    <textarea id="backupText" readonly style="width:100%;min-height:80px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;border:1px solid var(--line);border-radius:10px;padding:8px;background:#fff;"></textarea>
-    <div class="add-form">
-      <button class="btn-ghost" id="btnCopyBackup">Copiar dados</button>
-      <button class="btn-ghost" id="btnRefreshBackup">Atualizar texto</button>
-    </div>
-    <p class="hint">Colar backup para restaurar:</p>
-    <textarea id="restoreText" placeholder="Cole aqui o texto salvo anteriormente" style="width:100%;min-height:80px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;border:1px solid var(--line);border-radius:10px;padding:8px;"></textarea>
-    <div class="add-form">
-      <button class="btn-primary" id="btnRestore">Carregar backup</button>
-    </div>
-  </div>
+  <button class="bank-toggle" id="statsToggle">📊 Estatísticas da semana</button>
+  <div class="bank" id="statsBox"></div>
+
+
 </div>
 <div class="toast" id="toast"></div>
 
@@ -283,30 +364,80 @@ const FREQS = [
 ];
 const freqMap = Object.fromEntries(FREQS.map(f=>[f.id,f]));
 
+const DEFAULT_CATEGORIES = [
+  {id:"banheiro", name:"Banheiro", color:"#4C7EA8"},
+  {id:"cozinha", name:"Cozinha", color:"#C98A2E"},
+  {id:"lavanderia", name:"Lavanderia", color:"#6B4C9A"},
+  {id:"quarto", name:"Quarto", color:"#8FA24E"},
+  {id:"geral", name:"Geral", color:"#8A8A7C"},
+];
+
 const DEFAULT_TASKS = [
-  {id:"louca-geral", name:"Lavar louça (geral)", effort:2, freq:"5x"},
-  {id:"louca-quarto", name:"Lavar louça do quarto", effort:1, freq:"2x"},
-  {id:"lixo", name:"Tirar o lixo", effort:1, freq:"3x"},
-  {id:"roupa-uso", name:"Lavar roupa (uso pessoal)", effort:3, freq:"2x"},
-  {id:"roupa-cama-banho", name:"Lavar roupa de cama e banho", effort:3, freq:"1x"},
-  {id:"banheiro", name:"Limpar banheiro", effort:3, freq:"1x"},
-  {id:"cozinha", name:"Limpar cozinha", effort:2, freq:"1x"},
-  {id:"varrer", name:"Varrer / aspirar a casa", effort:2, freq:"2x"},
-  {id:"pano-chao", name:"Passar pano no chão", effort:2, freq:"1x"},
-  {id:"ventilador", name:"Limpar ventilador de teto", effort:2, freq:"mensal"},
-  {id:"dispensa", name:"Arrumar a dispensa", effort:2, freq:"mensal"},
-  {id:"armario", name:"Arrumar o armário", effort:2, freq:"mensal"},
-  {id:"plantas", name:"Regar plantas", effort:1, freq:"2x"},
-  {id:"geladeira", name:"Limpar geladeira", effort:2, freq:"quinzenal"},
+  {id:"louca-geral", name:"Lavar louça (geral)", effort:2, freq:"5x", category:"cozinha", minutes:15},
+  {id:"louca-quarto", name:"Lavar louça do quarto", effort:1, freq:"2x", category:"quarto", minutes:5},
+  {id:"lixo", name:"Tirar o lixo", effort:1, freq:"3x", category:"geral", minutes:5},
+  {id:"roupa-uso", name:"Lavar roupa (uso pessoal)", effort:3, freq:"2x", category:"lavanderia", minutes:40},
+  {id:"roupa-cama-banho", name:"Lavar roupa de cama e banho", effort:3, freq:"1x", category:"lavanderia", minutes:45},
+  {id:"banheiro", name:"Limpar banheiro", effort:3, freq:"1x", category:"banheiro", minutes:25},
+  {id:"cozinha", name:"Limpar cozinha", effort:2, freq:"1x", category:"cozinha", minutes:20},
+  {id:"varrer", name:"Varrer / aspirar a casa", effort:2, freq:"2x", category:"geral", minutes:20},
+  {id:"pano-chao", name:"Passar pano no chão", effort:2, freq:"1x", category:"geral", minutes:15},
+  {id:"ventilador", name:"Limpar ventilador de teto", effort:2, freq:"mensal", category:"geral", minutes:15},
+  {id:"dispensa", name:"Arrumar a dispensa", effort:2, freq:"mensal", category:"cozinha", minutes:20},
+  {id:"armario", name:"Arrumar o armário", effort:2, freq:"mensal", category:"quarto", minutes:20},
+  {id:"plantas", name:"Regar plantas", effort:1, freq:"2x", category:"geral", minutes:10},
+  {id:"geladeira", name:"Limpar geladeira", effort:2, freq:"quinzenal", category:"cozinha", minutes:15},
 ];
 
 let state = {
   people: ["Pessoa 1","Pessoa 2"],
   tasks: [],
+  categories: [],
   weekCounter: 1,
   weekKey: null,
-  assignments: null, // {0:[{taskId,name,effort,person,done}], ...}
+  assignments: null, // {0:[{taskId,name,effort,person,done,category,minutes}], ...}
+  theme: { paper: "#EDEFE8", ink: "#233229", person0: "#3F7D6E", person1: "#B15C68" },
 };
+
+function hexToRgb(hex){
+  hex = hex.replace('#','');
+  if(hex.length===3) hex = hex.split('').map(c=>c+c).join('');
+  const num = parseInt(hex,16);
+  return { r:(num>>16)&255, g:(num>>8)&255, b:num&255 };
+}
+function rgbToHex(r,g,b){
+  return '#' + [r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
+}
+function mixHex(hex, withHex, ratio){
+  const c1 = hexToRgb(hex), c2 = hexToRgb(withHex);
+  return rgbToHex(
+    c1.r*(1-ratio)+c2.r*ratio,
+    c1.g*(1-ratio)+c2.g*ratio,
+    c1.b*(1-ratio)+c2.b*ratio
+  );
+}
+function applyTheme(){
+  const t = state.theme || {};
+  const root = document.documentElement.style;
+  const paper = t.paper || "#EDEFE8";
+  const ink = t.ink || "#233229";
+  const p0 = t.person0 || "#3F7D6E";
+  const p1 = t.person1 || "#B15C68";
+  root.setProperty('--paper', paper);
+  root.setProperty('--ink', ink);
+  root.setProperty('--ink-soft', mixHex(ink, '#ffffff', 0.38));
+  root.setProperty('--teal', p0);
+  root.setProperty('--teal-soft', mixHex(p0, '#ffffff', 0.82));
+  root.setProperty('--rose', p1);
+  root.setProperty('--rose-soft', mixHex(p1, '#ffffff', 0.82));
+}
+function catById(id){
+  return (state.categories||[]).find(c=>c.id===id) || {id:'geral', name:'Geral', color:'#8A8A7C'};
+}
+function isDayAllowed(task, d){
+  if(!task || !task.allowedDays || task.allowedDays.length===0) return true;
+  return task.allowedDays.includes(d);
+}
 
 // ====== CONFIGURAÇÃO DO BANCO (Firebase Realtime Database) ======
 // Troque pela URL do SEU banco (veja instruções de configuração).
@@ -342,6 +473,7 @@ async function persist(){
 async function load(){
   if(NOT_CONFIGURED){
     state.tasks = DEFAULT_TASKS.map(t=>({...t}));
+    state.categories = DEFAULT_CATEGORIES.map(c=>({...c}));
     distributeWeek(true);
     render();
     document.getElementById('autosaveWarning').style.display = 'block';
@@ -354,15 +486,35 @@ async function load(){
       state = Object.assign(state, data);
     } else {
       state.tasks = DEFAULT_TASKS.map(t=>({...t}));
+      state.categories = DEFAULT_CATEGORIES.map(c=>({...c}));
       distributeWeek(true);
     }
   }catch(e){
     console.error('load failed', e);
     state.tasks = DEFAULT_TASKS.map(t=>({...t}));
+    state.categories = DEFAULT_CATEGORIES.map(c=>({...c}));
     distributeWeek(true);
   }
+  migrateState();
   render();
   startPolling();
+}
+function migrateState(){
+  if(!state.categories || state.categories.length===0){
+    state.categories = DEFAULT_CATEGORIES.map(c=>({...c}));
+  }
+  (state.tasks||[]).forEach(t=>{
+    if(!t.category) t.category = 'geral';
+    if(t.minutes==null) t.minutes = 15;
+  });
+  if(state.assignments){
+    state.assignments.forEach(day=>{
+      day.forEach(t=>{
+        if(!t.category) t.category = 'geral';
+        if(t.minutes==null) t.minutes = 15;
+      });
+    });
+  }
 }
 function startPolling(){
   if(pollHandle) clearInterval(pollHandle);
@@ -372,6 +524,7 @@ function startPolling(){
       const data = await res.json();
       if(data && JSON.stringify(data) !== JSON.stringify(state)){
         state = Object.assign(state, data);
+        migrateState();
         render();
       }
     }catch(e){ /* falha silenciosa no polling, não incomoda o usuário */ }
@@ -396,7 +549,7 @@ function distributeWeek(isFirst){
     const active = (wc % f.everyN === 0) || f.everyN===1;
     if(!active) return;
     for(let i=0;i<f.per;i++){
-      instances.push({taskId:task.id, name:task.name, effort:task.effort});
+      instances.push({taskId:task.id, name:task.name, effort:task.effort, category:task.category||'geral', minutes:task.minutes||15, allowedDays:task.allowedDays||[]});
     }
   });
   // sort heaviest first for better bin packing
@@ -414,9 +567,11 @@ function distributeWeek(isFirst){
       for(const ud of usedDays){ if(Math.abs(ud-d)<=1) return true; }
       return false;
     };
+    const allowed = (d)=> (!inst.allowedDays || inst.allowedDays.length===0) ? true : inst.allowedDays.includes(d);
     // pass 1: skip same day AND days adjacent to another day this same task already landed on
     let bestDay = -1, bestScore = Infinity;
     for(let d=0; d<7; d++){
+      if(!allowed(d)) continue;
       if(dayTasksToday[d].has(inst.taskId)) continue;
       if(isAdjacent(d)) continue;
       const penalty = isWeekend(d) ? 3.5 : 0;
@@ -426,6 +581,7 @@ function distributeWeek(isFirst){
     if(bestDay === -1){
       // pass 2: relax the adjacency rule, still avoid same day
       for(let d=0; d<7; d++){
+        if(!allowed(d)) continue;
         if(dayTasksToday[d].has(inst.taskId)) continue;
         const penalty = isWeekend(d) ? 3.5 : 0;
         const score = dayLoad[d] + penalty;
@@ -433,9 +589,16 @@ function distributeWeek(isFirst){
       }
     }
     if(bestDay === -1){
-      // pass 3: last resort, allow repeat on least loaded day
+      // pass 3: last resort, allow repeat on least loaded day — but still respect the day restriction
       let minLoad = Infinity;
-      for(let d=0; d<7; d++){ if(dayLoad[d]<minLoad){minLoad=dayLoad[d]; bestDay=d;} }
+      for(let d=0; d<7; d++){
+        if(!allowed(d)) continue;
+        if(dayLoad[d]<minLoad){minLoad=dayLoad[d]; bestDay=d;}
+      }
+    }
+    if(bestDay === -1){
+      // truly no allowed day had room (shouldn't normally happen) — skip this instance rather than break a hard restriction
+      return;
     }
     dayLoad[bestDay] += inst.effort;
     dayTasksToday[bestDay].add(inst.taskId);
@@ -446,6 +609,7 @@ function distributeWeek(isFirst){
     personLoad[person] += inst.effort;
     days[bestDay].push({
       taskId: inst.taskId, name: inst.name, effort: inst.effort,
+      category: inst.category, minutes: inst.minutes,
       person, done:false
     });
   });
@@ -454,15 +618,20 @@ function distributeWeek(isFirst){
 }
 
 function render(){
+  applyTheme();
   document.getElementById('name0').value = state.people[0];
   document.getElementById('name1').value = state.people[1];
   document.getElementById('weekLabel').textContent = 'SEMANA ' + state.weekCounter;
 
   const freqSel = document.getElementById('newTaskFreq');
   freqSel.innerHTML = FREQS.map(f=>`<option value="${f.id}">${f.label}</option>`).join('');
+  const catSel = document.getElementById('newTaskCategory');
+  catSel.innerHTML = state.categories.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
 
   renderDays();
   renderBank();
+  renderCategories();
+  renderStats();
 }
 
 function renderDays(){
@@ -479,20 +648,22 @@ function renderDays(){
     dayDiv.className = 'day' + (isWeekend(d) ? ' weekend' : '');
     const tasks = (state.assignments && state.assignments[d]) || [];
     const totalEffort = tasks.reduce((s,t)=>s+t.effort,0);
+    const totalMinutes = tasks.reduce((s,t)=>s+(t.minutes||0),0);
 
     let body = '';
     if(tasks.length===0){
       body = `<div class="empty-day">Nenhuma tarefa por aqui — dia livre.</div>`;
     } else {
       body = tasks.map((t,ti)=>{
-        const dotsHtml = [1,2,3].map(n=>`<span class="${n<=t.effort?'on':''}"></span>`).join('');
+        const dotsHtml = [1,2,3].map(n=>`<span class="${n<=t.effort?'on':''}">${n<=t.effort?'♥':'♡'}</span>`).join('');
+        const cat = catById(t.category);
         return `
         <div class="task-card">
-          <span class="pin"></span>
+          <span class="cat-dot" style="background:${cat.color}" title="${escapeHtml(cat.name)}"></span>
           <div class="check ${t.done?'done':''}" data-day="${d}" data-idx="${ti}" data-act="toggle"></div>
           <div class="task-info">
             <div class="task-name ${t.done?'done':''}">${escapeHtml(t.name)}</div>
-            <div class="task-sub"><span class="dots">${dotsHtml}</span></div>
+            <div class="task-sub"><span class="dots">${dotsHtml}</span> <span class="mins-badge">· ${t.minutes||0}min</span></div>
           </div>
           <div class="person-chip chip${t.person}" data-day="${d}" data-idx="${ti}" data-act="person">${escapeHtml(state.people[t.person])}</div>
           <button class="skip-btn" data-day="${d}" data-idx="${ti}" data-act="skip" title="Pular essa">✕</button>
@@ -503,7 +674,7 @@ function renderDays(){
     dayDiv.innerHTML = `
       <div class="day-head">
         <span class="day-name">${name}</span>
-        <span class="day-meta">${dateStr} · ${totalEffort>0? '●'.repeat(Math.min(totalEffort,6)) : '—'}</span>
+        <span class="day-meta">${dateStr} · ${totalEffort>0? '♥'.repeat(totalEffort) : '—'} · ${totalMinutes>0 ? '≈'+totalMinutes+'min' : '—'}</span>
       </div>
       <div class="day-body">${body}</div>
     `;
@@ -514,41 +685,54 @@ function renderDays(){
     elx.addEventListener('click', ()=>{
       const d = +elx.dataset.day, i = +elx.dataset.idx;
       state.assignments[d][i].done = !state.assignments[d][i].done;
-      renderDays(); scheduleSave();
+      renderDays(); renderStats(); scheduleSave();
     });
   });
   el.querySelectorAll('[data-act="person"]').forEach(elx=>{
     elx.addEventListener('click', ()=>{
       const d = +elx.dataset.day, i = +elx.dataset.idx;
       state.assignments[d][i].person = state.assignments[d][i].person===0?1:0;
-      renderDays(); scheduleSave();
+      renderDays(); renderStats(); scheduleSave();
     });
   });
   el.querySelectorAll('[data-act="skip"]').forEach(elx=>{
     elx.addEventListener('click', ()=>{
       const d = +elx.dataset.day, i = +elx.dataset.idx;
       state.assignments[d].splice(i,1);
-      renderDays(); scheduleSave();
+      renderDays(); renderStats(); scheduleSave();
     });
   });
 }
 
+const DAY_TOGGLE_LABELS = ["S","T","Q","Q","S","S","D"];
+
 function renderBank(){
   const list = document.getElementById('bankList');
-  list.innerHTML = state.tasks.map(t=>`
+  list.innerHTML = state.tasks.map(t=>{
+    const allowed = t.allowedDays || [];
+    const dayBtns = DAY_TOGGLE_LABELS.map((lbl,d)=>{
+      const on = allowed.length===0 || allowed.includes(d);
+      return `<div class="day-toggle ${on?'on':''}" data-id="${t.id}" data-day="${d}">${lbl}</div>`;
+    }).join('');
+    return `
     <div class="bank-item">
       <input type="text" value="${escapeHtml(t.name)}" data-id="${t.id}" data-field="name" />
       <select data-id="${t.id}" data-field="freq">
         ${FREQS.map(f=>`<option value="${f.id}" ${f.id===t.freq?'selected':''}>${f.label}</option>`).join('')}
       </select>
       <select data-id="${t.id}" data-field="effort">
-        <option value="1" ${t.effort==1?'selected':''}>leve</option>
-        <option value="2" ${t.effort==2?'selected':''}>médio</option>
-        <option value="3" ${t.effort==3?'selected':''}>pesado</option>
+        <option value="1" ${t.effort==1?'selected':''}>leve ♥</option>
+        <option value="2" ${t.effort==2?'selected':''}>médio ♥♥</option>
+        <option value="3" ${t.effort==3?'selected':''}>pesado ♥♥♥</option>
       </select>
+      <select data-id="${t.id}" data-field="category">
+        ${state.categories.map(c=>`<option value="${c.id}" ${c.id===(t.category||'geral')?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}
+      </select>
+      <input type="number" min="1" value="${t.minutes||15}" data-id="${t.id}" data-field="minutes" style="width:52px;border:1px solid var(--line);border-radius:8px;font-size:11.5px;padding:4px 5px;" />
       <button class="del" data-id="${t.id}">✕</button>
-    </div>
-  `).join('');
+      <div class="day-toggles">${dayBtns}</div>
+    </div>`;
+  }).join('');
 
   list.querySelectorAll('input[data-field="name"]').forEach(inp=>{
     inp.addEventListener('change', ()=>{
@@ -568,6 +752,38 @@ function renderBank(){
       if(t){ t.effort = +sel.value; scheduleSave(); }
     });
   });
+  list.querySelectorAll('select[data-field="category"]').forEach(sel=>{
+    sel.addEventListener('change', ()=>{
+      const t = state.tasks.find(x=>x.id===sel.dataset.id);
+      if(t){ t.category = sel.value; scheduleSave(); }
+    });
+  });
+  list.querySelectorAll('input[data-field="minutes"]').forEach(inp=>{
+    inp.addEventListener('change', ()=>{
+      const t = state.tasks.find(x=>x.id===inp.dataset.id);
+      if(t){ t.minutes = Math.max(1, +inp.value || 15); scheduleSave(); }
+    });
+  });
+  list.querySelectorAll('.day-toggle').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const t = state.tasks.find(x=>x.id===btn.dataset.id);
+      if(!t) return;
+      const d = +btn.dataset.day;
+      let allowed = t.allowedDays && t.allowedDays.length ? [...t.allowedDays] : [0,1,2,3,4,5,6];
+      if(allowed.includes(d)){
+        allowed = allowed.filter(x=>x!==d);
+      } else {
+        allowed.push(d);
+      }
+      // if every day ends up selected, store as unrestricted (empty array)
+      t.allowedDays = allowed.length===7 ? [] : allowed;
+      if(allowed.length===0){
+        showToast('⚠ Pelo menos um dia precisa ficar permitido.');
+        t.allowedDays = [d]; // avoid a task with zero valid days
+      }
+      renderBank(); scheduleSave();
+    });
+  });
   list.querySelectorAll('.del').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       state.tasks = state.tasks.filter(x=>x.id!==btn.dataset.id);
@@ -577,6 +793,78 @@ function renderBank(){
   });
 }
 
+function renderCategories(){
+  const list = document.getElementById('catList');
+  if(!list) return;
+  list.innerHTML = state.categories.map(c=>`
+    <div class="cat-item">
+      <input type="color" value="${c.color}" data-id="${c.id}" data-field="color" />
+      <input type="text" value="${escapeHtml(c.name)}" data-id="${c.id}" data-field="name" />
+      <button class="del" data-id="${c.id}">✕</button>
+    </div>
+  `).join('');
+  list.querySelectorAll('input[data-field="color"]').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const c = state.categories.find(x=>x.id===inp.dataset.id);
+      if(c){ c.color = inp.value; renderDays(); }
+    });
+    inp.addEventListener('change', ()=>scheduleSave());
+  });
+  list.querySelectorAll('input[data-field="name"]').forEach(inp=>{
+    inp.addEventListener('change', ()=>{
+      const c = state.categories.find(x=>x.id===inp.dataset.id);
+      if(c){ c.name = inp.value.trim() || c.name; renderBank(); render(); scheduleSave(); }
+    });
+  });
+  list.querySelectorAll('.del').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.dataset.id;
+      if(id==='geral'){ showToast('⚠ Essa categoria é a padrão e não pode ser removida.'); return; }
+      state.categories = state.categories.filter(c=>c.id!==id);
+      state.tasks.forEach(t=>{ if(t.category===id) t.category='geral'; });
+      renderCategories(); renderBank(); renderDays(); scheduleSave();
+      showToast('Categoria removida — tarefas movidas para "Geral".');
+    });
+  });
+}
+
+function computeStats(){
+  const stats = [
+    {done:0, doneEffort:0, total:0, totalEffort:0},
+    {done:0, doneEffort:0, total:0, totalEffort:0},
+  ];
+  (state.assignments||[]).forEach(day=>{
+    day.forEach(t=>{
+      const s = stats[t.person];
+      if(!s) return;
+      s.total += 1; s.totalEffort += t.effort;
+      if(t.done){ s.done += 1; s.doneEffort += t.effort; }
+    });
+  });
+  return stats;
+}
+
+function renderStats(){
+  const box = document.getElementById('statsBox');
+  if(!box) return;
+  const stats = computeStats();
+  const grandTotalEffort = Math.max(1, stats[0].totalEffort + stats[1].totalEffort);
+  box.innerHTML = [0,1].map(p=>{
+    const s = stats[p];
+    const pct = Math.round((s.totalEffort / grandTotalEffort) * 100);
+    const color = p===0 ? 'var(--teal)' : 'var(--rose)';
+    return `
+    <div class="stat-block">
+      <div class="stat-name" style="color:${color}">${escapeHtml(state.people[p])}</div>
+      <div class="stat-line">${s.done} de ${s.total} tarefas concluídas nesta semana</div>
+      <div class="stat-line">Carga desta semana: ${s.totalEffort} pts (${pct}% do total das duas)</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      <div class="stat-line" style="margin-top:8px;">Corações coletados (tarefas concluídas):</div>
+      <div class="hearts" style="color:${color}">${'♥'.repeat(s.doneEffort) || '—'}</div>
+    </div>`;
+  }).join('') + `<p class="hint">Cada coração = 1 ponto de dificuldade de uma tarefa marcada como feita. Esses números são só da semana atual — zeram quando vocês clicam em "Nova semana".</p>`;
+}
+
 function escapeHtml(s){
   const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
 }
@@ -584,48 +872,60 @@ function escapeHtml(s){
 document.getElementById('name0').addEventListener('change', e=>{ state.people[0]=e.target.value||'Pessoa 1'; renderDays(); scheduleSave(); });
 document.getElementById('name1').addEventListener('change', e=>{ state.people[1]=e.target.value||'Pessoa 2'; renderDays(); scheduleSave(); });
 
-document.getElementById('bankToggle').addEventListener('click', ()=>{
-  document.getElementById('bank').classList.toggle('open');
+document.getElementById('customizeToggle').addEventListener('click', ()=>{
+  document.getElementById('customizeBox').classList.toggle('open');
+  syncThemeInputs();
+});
+document.querySelectorAll('.subtab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.subtab-btn').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    document.querySelectorAll('.subtab-panel').forEach(p=>p.style.display='none');
+    document.getElementById('panel-' + btn.dataset.tab).style.display='block';
+  });
+});
+document.getElementById('btnAddCat').addEventListener('click', ()=>{
+  const nameInp = document.getElementById('newCatName');
+  const name = nameInp.value.trim();
+  if(!name) return;
+  const color = document.getElementById('newCatColor').value;
+  const id = 'cat-' + Date.now();
+  state.categories.push({id, name, color});
+  nameInp.value='';
+  renderCategories(); renderBank(); scheduleSave();
 });
 
-document.getElementById('backupToggle').addEventListener('click', ()=>{
-  const box = document.getElementById('backupBox');
-  box.classList.toggle('open');
-  if(box.classList.contains('open')) refreshBackupText();
+document.getElementById('statsToggle').addEventListener('click', ()=>{
+  document.getElementById('statsBox').classList.toggle('open');
+  renderStats();
 });
-function refreshBackupText(){
-  document.getElementById('backupText').value = JSON.stringify(state);
+
+function syncThemeInputs(){
+  const t = state.theme || {};
+  document.getElementById('colorPaper').value = t.paper || "#EDEFE8";
+  document.getElementById('colorPerson0').value = t.person0 || "#3F7D6E";
+  document.getElementById('colorPerson1').value = t.person1 || "#B15C68";
+  document.getElementById('colorLabel0').textContent = state.people[0];
+  document.getElementById('colorLabel1').textContent = state.people[1];
 }
-document.getElementById('btnRefreshBackup').addEventListener('click', refreshBackupText);
-document.getElementById('btnCopyBackup').addEventListener('click', async ()=>{
-  refreshBackupText();
-  const ta = document.getElementById('backupText');
-  ta.select(); ta.setSelectionRange(0, 999999);
-  let copied = false;
-  try{
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      await navigator.clipboard.writeText(ta.value);
-      copied = true;
-    }
-  }catch(e){ /* clipboard API blocked, fall back below */ }
-  if(!copied){
-    try{ copied = document.execCommand('copy'); }catch(e){ copied = false; }
-  }
-  showToast(copied ? 'Copiado! Cole em algum lugar seguro.' : 'Não consegui copiar automaticamente — selecione o texto e copie manualmente.');
+document.getElementById('colorPaper').addEventListener('input', e=>{
+  state.theme.paper = e.target.value; applyTheme();
 });
-document.getElementById('btnRestore').addEventListener('click', ()=>{
-  const raw = document.getElementById('restoreText').value.trim();
-  if(!raw) return;
-  try{
-    const parsed = JSON.parse(raw);
-    state = Object.assign(state, parsed);
-    render();
-    scheduleSave();
-    showToast('Backup carregado!');
-  }catch(e){
-    showToast('⚠ Esse texto não é um backup válido.');
-  }
+document.getElementById('colorPaper').addEventListener('change', ()=>{ scheduleSave(); });
+document.getElementById('colorPerson0').addEventListener('input', e=>{
+  state.theme.person0 = e.target.value; applyTheme();
 });
+document.getElementById('colorPerson0').addEventListener('change', ()=>{ scheduleSave(); });
+document.getElementById('colorPerson1').addEventListener('input', e=>{
+  state.theme.person1 = e.target.value; applyTheme();
+});
+document.getElementById('colorPerson1').addEventListener('change', ()=>{ scheduleSave(); });
+document.getElementById('btnResetTheme').addEventListener('click', ()=>{
+  state.theme = { paper: "#EDEFE8", person0: "#3F7D6E", person1: "#B15C68" };
+  applyTheme(); syncThemeInputs(); scheduleSave();
+  showToast('Cores restauradas.');
+});
+
 
 document.getElementById('btnAddTask').addEventListener('click', ()=>{
   const nameInp = document.getElementById('newTaskName');
@@ -633,8 +933,10 @@ document.getElementById('btnAddTask').addEventListener('click', ()=>{
   if(!name) return;
   const freq = document.getElementById('newTaskFreq').value;
   const effort = +document.getElementById('newTaskEffort').value;
+  const category = document.getElementById('newTaskCategory').value;
+  const minutes = Math.max(1, +document.getElementById('newTaskMinutes').value || 15);
   const id = 'custom-' + Date.now();
-  state.tasks.push({id, name, freq, effort});
+  state.tasks.push({id, name, freq, effort, category, minutes, allowedDays:[]});
   nameInp.value='';
   renderBank(); scheduleSave();
   showToast('Tarefa adicionada. Clique em "Redistribuir" para incluir na semana.');
@@ -642,7 +944,7 @@ document.getElementById('btnAddTask').addEventListener('click', ()=>{
 
 document.getElementById('btnRedistribute').addEventListener('click', ()=>{
   distributeWeek();
-  renderDays(); scheduleSave();
+  renderDays(); renderStats(); scheduleSave();
   showToast('Semana redistribuída.');
 });
 

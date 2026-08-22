@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mutirão da Casa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EDEFE8;
+    --paper-card:#F8F8F3;
+    --ink:#233229;
+    --ink-soft:#5C6B60;
+    --line:#D6DACB;
+    --teal:#3F7D6E;
+    --teal-soft:#DCEAE4;
+    --mustard:#C98A2E;
+    --mustard-soft:#F3E3C7;
+    --rose:#B15C68;
+    --rose-soft:#F1DCDE;
+    --shadow: 0 1px 0 rgba(35,50,41,0.06);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:64px;
+  }
+  .wrap{max-width:640px;margin:0 auto;padding:20px 16px 8px;}
+
+  /* header */
+  header{padding:8px 4px 20px;position:relative;}
+  .line{
+    position:absolute;top:38px;left:0;right:0;height:2px;
+    background: repeating-linear-gradient(90deg, var(--ink-soft) 0 6px, transparent 6px 12px);
+    opacity:0.35;
+  }
+  h1{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:30px;
+    margin:0 0 2px;
+    letter-spacing:-0.01em;
+  }
+  .subtitle{
+    font-size:13.5px;
+    color:var(--ink-soft);
+    margin:0;
+  }
+
+  .people-row{
+    display:flex;gap:10px;margin-top:18px;position:relative;z-index:1;
+  }
+  .person-pin{
+    flex:1;
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:10px 12px 8px;
+    box-shadow:var(--shadow);
+  }
+  .person-pin .dot{
+    width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px;
+  }
+  .person-pin input{
+    width:100%;border:none;background:transparent;font-family:'Fraunces',serif;
+    font-weight:600;font-size:15px;color:var(--ink);padding:2px 0;
+  }
+  .person-pin input:focus{outline:none;border-bottom:1px solid var(--ink-soft);}
+  .p0 .dot{background:var(--teal);}
+  .p1 .dot{background:var(--rose);}
+
+  .week-bar{
+    display:flex;align-items:center;justify-content:space-between;
+    margin:18px 0 6px;
+  }
+  .week-label{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.02em;
+    color:var(--ink-soft);
+  }
+  .actions{display:flex;gap:8px;}
+  button{
+    font-family:'Inter',sans-serif;font-weight:600;font-size:12.5px;
+    border:none;border-radius:100px;padding:9px 14px;cursor:pointer;
+    transition:transform .12s ease, opacity .12s ease;
+  }
+  button:active{transform:scale(0.96);}
+  .btn-primary{background:var(--ink);color:var(--paper-card);}
+  .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);}
+
+  /* effort dots */
+  .dots{display:inline-flex;gap:3px;vertical-align:middle;}
+  .dots span{width:5px;height:5px;border-radius:50%;background:var(--line);}
+  .dots span.on{background:var(--ink-soft);}
+
+  /* day sections */
+  .day{
+    margin-top:14px;
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:var(--shadow);
+  }
+  .day.weekend{ background: linear-gradient(180deg, var(--paper-card), #F3F0E9); }
+  .day-head{
+    display:flex;align-items:baseline;justify-content:space-between;
+    padding:12px 16px 8px;
+    border-bottom:1px dashed var(--line);
+  }
+  .day-name{
+    font-family:'Fraunces',serif;font-weight:600;font-size:17px;
+  }
+  .day-meta{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);
+  }
+  .day-body{padding:8px 10px 12px;}
+  .empty-day{
+    padding:10px 6px 4px;font-size:12.5px;color:var(--ink-soft);font-style:italic;
+  }
+
+  .task-card{
+    display:flex;align-items:center;gap:10px;
+    padding:9px 8px;
+    border-radius:12px;
+    margin-bottom:4px;
+    position:relative;
+  }
+  .task-card:hover{background:rgba(35,50,41,0.03);}
+  .pin{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--mustard);flex:none;
+    box-shadow:0 0 0 3px var(--mustard-soft);
+    margin-left:2px;
+  }
+  .check{
+    width:20px;height:20px;border-radius:7px;border:1.6px solid var(--line);
+    flex:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    background:var(--paper-card);
+  }
+  .check.done{background:var(--teal);border-color:var(--teal);}
+  .check.done::after{content:"✓";color:#fff;font-size:12px;font-weight:700;}
+  .task-info{flex:1;min-width:0;}
+  .task-name{
+    font-size:14px;font-weight:500;line-height:1.25;
+  }
+  .task-name.done{text-decoration:line-through;color:var(--ink-soft);}
+  .task-sub{margin-top:2px;}
+  .person-chip{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;
+    padding:4px 8px;border-radius:100px;cursor:pointer;flex:none;
+    border:1px solid transparent;white-space:nowrap;
+  }
+  .chip0{background:var(--teal-soft);color:var(--teal);}
+  .chip1{background:var(--rose-soft);color:var(--rose);}
+  .skip-btn{
+    background:none;border:none;color:var(--ink-soft);font-size:15px;
+    padding:2px 4px;cursor:pointer;flex:none;opacity:0.5;
+  }
+  .skip-btn:hover{opacity:1;}
+
+  /* bank */
+  .bank-toggle{
+    margin-top:22px;width:100%;background:transparent;border:1px dashed var(--line);
+    color:var(--ink-soft);padding:11px;border-radius:14px;font-size:13px;
+  }
+  .bank{
+    margin-top:10px;display:none;
+  }
+  .bank.open{display:block;}
+  .bank-item{
+    display:flex;align-items:center;gap:8px;
+    background:var(--paper-card);border:1px solid var(--line);
+    border-radius:12px;padding:8px 10px;margin-bottom:6px;
+  }
+  .bank-item input[type=text]{
+    flex:1;border:none;background:transparent;font-size:13.5px;color:var(--ink);
+    font-family:'Inter',sans-serif;min-width:0;
+  }
+  .bank-item input:focus, .bank-item select:focus{outline:none;}
+  .bank-item select{
+    border:1px solid var(--line);background:#fff;border-radius:8px;
+    font-size:11.5px;font-family:'Inter',sans-serif;color:var(--ink-soft);
+    padding:4px 5px;flex:none;
+  }
+  .bank-item .del{
+    background:none;border:none;color:var(--rose);font-size:16px;padding:2px 4px;
+  }
+  .add-form{
+    display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;
+  }
+  .add-form input[type=text]{
+    flex:1;min-width:120px;padding:9px 11px;border-radius:10px;border:1px solid var(--line);
+    font-size:13.5px;font-family:'Inter',sans-serif;
+  }
+  .add-form select{
+    padding:9px 8px;border-radius:10px;border:1px solid var(--line);font-size:12px;
+    font-family:'Inter',sans-serif;color:var(--ink-soft);background:#fff;
+  }
+  .hint{font-size:11.5px;color:var(--ink-soft);margin:8px 2px 0;line-height:1.5;}
+  .toast{
+    position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:var(--paper-card);font-size:12.5px;
+    padding:9px 16px;border-radius:100px;opacity:0;pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="line"></div>
+    <h1>Mutirão da Casa</h1>
+    <p class="subtitle">Tarefas espalhadas pela semana — sem sobrecarregar o fim de semana.</p>
+    <div class="people-row">
+      <div class="person-pin p0"><span class="dot"></span><input id="name0" maxlength="16" /></div>
+      <div class="person-pin p1"><span class="dot"></span><input id="name1" maxlength="16" /></div>
+    </div>
+    <div id="autosaveWarning" style="display:none;margin-top:12px;background:var(--rose-soft);color:var(--rose);border-radius:12px;padding:10px 12px;font-size:12px;font-weight:500;">
+      ⚠ Configure o banco de dados (Firebase) para ativar a sincronização entre vocês duas — veja as instruções enviadas junto com o arquivo. Enquanto isso, use o "Backup manual" para não perder suas alterações.
+    </div>
+  </header>
+
+  <div class="week-bar">
+    <span class="week-label" id="weekLabel">SEMANA 1</span>
+    <div class="actions">
+      <button class="btn-ghost" id="btnRedistribute">Redistribuir</button>
+      <button class="btn-primary" id="btnNewWeek">Nova semana →</button>
+    </div>
+  </div>
+
+  <div id="days"></div>
+
+  <button class="bank-toggle" id="bankToggle">⚙ Gerenciar tarefas (adicionar, editar frequência/peso)</button>
+  <div class="bank" id="bank">
+    <div id="bankList"></div>
+    <div class="add-form">
+      <input type="text" id="newTaskName" placeholder="Nova tarefa (ex: limpar sofá)" />
+      <select id="newTaskFreq"></select>
+      <select id="newTaskEffort">
+        <option value="1">leve ●</option>
+        <option value="2" selected>médio ●●</option>
+        <option value="3">pesado ●●●</option>
+      </select>
+      <button class="btn-primary" id="btnAddTask">Adicionar</button>
+    </div>
+    <p class="hint">Frequência define quantas vezes a tarefa aparece por semana (ou a cada quantas semanas). O peso (leve/médio/pesado) é usado para equilibrar a carga entre os dias e evitar empilhar tudo no sábado/domingo.</p>
+  </div>
+
+  <button class="bank-toggle" id="backupToggle">💾 Backup manual (o armazenamento automático está instável)</button>
+  <div class="bank" id="backupBox">
+    <p class="hint" style="margin-top:0;">O salvamento automático deste ambiente está apresentando erro. Use este backup manual: copie o texto abaixo e guarde (ex: no Notas do celular). Quando abrir o painel de novo, cole aqui e clique em "Carregar" para restaurar tudo.</p>
+    <textarea id="backupText" readonly style="width:100%;min-height:80px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;border:1px solid var(--line);border-radius:10px;padding:8px;background:#fff;"></textarea>
+    <div class="add-form">
+      <button class="btn-ghost" id="btnCopyBackup">Copiar dados</button>
+      <button class="btn-ghost" id="btnRefreshBackup">Atualizar texto</button>
+    </div>
+    <p class="hint">Colar backup para restaurar:</p>
+    <textarea id="restoreText" placeholder="Cole aqui o texto salvo anteriormente" style="width:100%;min-height:80px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;border:1px solid var(--line);border-radius:10px;padding:8px;"></textarea>
+    <div class="add-form">
+      <button class="btn-primary" id="btnRestore">Carregar backup</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const DAY_NAMES = ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"];
+const DAY_SHORT = ["SEG","TER","QUA","QUI","SEX","SÁB","DOM"];
+const FREQS = [
+  {id:"1x", label:"1x/semana", per:1, everyN:1},
+  {id:"2x", label:"2x/semana", per:2, everyN:1},
+  {id:"3x", label:"3x/semana", per:3, everyN:1},
+  {id:"5x", label:"5x/semana", per:5, everyN:1},
+  {id:"diaria", label:"diária (7x)", per:7, everyN:1},
+  {id:"quinzenal", label:"quinzenal", per:1, everyN:2},
+  {id:"mensal", label:"mensal", per:1, everyN:4},
+];
+const freqMap = Object.fromEntries(FREQS.map(f=>[f.id,f]));
+
+const DEFAULT_TASKS = [
+  {id:"louca-geral", name:"Lavar louça (geral)", effort:2, freq:"5x"},
+  {id:"louca-quarto", name:"Lavar louça do quarto", effort:1, freq:"2x"},
+  {id:"lixo", name:"Tirar o lixo", effort:1, freq:"3x"},
+  {id:"roupa-uso", name:"Lavar roupa (uso pessoal)", effort:3, freq:"2x"},
+  {id:"roupa-cama-banho", name:"Lavar roupa de cama e banho", effort:3, freq:"1x"},
+  {id:"banheiro", name:"Limpar banheiro", effort:3, freq:"1x"},
+  {id:"cozinha", name:"Limpar cozinha", effort:2, freq:"1x"},
+  {id:"varrer", name:"Varrer / aspirar a casa", effort:2, freq:"2x"},
+  {id:"pano-chao", name:"Passar pano no chão", effort:2, freq:"1x"},
+  {id:"ventilador", name:"Limpar ventilador de teto", effort:2, freq:"mensal"},
+  {id:"dispensa", name:"Arrumar a dispensa", effort:2, freq:"mensal"},
+  {id:"armario", name:"Arrumar o armário", effort:2, freq:"mensal"},
+  {id:"plantas", name:"Regar plantas", effort:1, freq:"2x"},
+  {id:"geladeira", name:"Limpar geladeira", effort:2, freq:"quinzenal"},
+];
+
+let state = {
+  people: ["Pessoa 1","Pessoa 2"],
+  tasks: [],
+  weekCounter: 1,
+  weekKey: null,
+  assignments: null, // {0:[{taskId,name,effort,person,done}], ...}
+};
+
+// ====== CONFIGURAÇÃO DO BANCO (Firebase Realtime Database) ======
+// Troque pela URL do SEU banco (veja instruções de configuração).
+const FIREBASE_DB_URL = "https://org-casa-4223f-default-rtdb.firebaseio.com";
+const DB_PATH = "/mutirao-da-casa.json";
+const NOT_CONFIGURED = FIREBASE_DB_URL.includes("SEU-PROJETO");
+let pollHandle = null;
+
+let saving = false;
+function scheduleSave(){
+  persist();
+}
+async function persist(){
+  if(NOT_CONFIGURED){
+    showToast('⚠ Configure o Firebase antes de usar (veja instruções abaixo).');
+    document.getElementById('autosaveWarning').style.display = 'block';
+    return;
+  }
+  try{
+    const res = await fetch(FIREBASE_DB_URL + DB_PATH, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(state)
+    });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    document.getElementById('autosaveWarning').style.display = 'none';
+  }catch(e){
+    console.error('sync failed', e);
+    showToast('⚠ Não consegui sincronizar — verifique sua internet.');
+    document.getElementById('autosaveWarning').style.display = 'block';
+  }
+}
+async function load(){
+  if(NOT_CONFIGURED){
+    state.tasks = DEFAULT_TASKS.map(t=>({...t}));
+    distributeWeek(true);
+    render();
+    document.getElementById('autosaveWarning').style.display = 'block';
+    return;
+  }
+  try{
+    const res = await fetch(FIREBASE_DB_URL + DB_PATH);
+    const data = await res.json();
+    if(data){
+      state = Object.assign(state, data);
+    } else {
+      state.tasks = DEFAULT_TASKS.map(t=>({...t}));
+      distributeWeek(true);
+    }
+  }catch(e){
+    console.error('load failed', e);
+    state.tasks = DEFAULT_TASKS.map(t=>({...t}));
+    distributeWeek(true);
+  }
+  render();
+  startPolling();
+}
+function startPolling(){
+  if(pollHandle) clearInterval(pollHandle);
+  pollHandle = setInterval(async ()=>{
+    try{
+      const res = await fetch(FIREBASE_DB_URL + DB_PATH);
+      const data = await res.json();
+      if(data && JSON.stringify(data) !== JSON.stringify(state)){
+        state = Object.assign(state, data);
+        render();
+      }
+    }catch(e){ /* falha silenciosa no polling, não incomoda o usuário */ }
+  }, 6000); // busca atualizações da outra pessoa a cada 6s
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1600);
+}
+
+function isWeekend(dayIdx){ return dayIdx===5 || dayIdx===6; }
+
+function distributeWeek(isFirst){
+  const wc = state.weekCounter;
+  // build instance list
+  let instances = [];
+  state.tasks.forEach(task=>{
+    const f = freqMap[task.freq] || freqMap["1x"];
+    const active = (wc % f.everyN === 0) || f.everyN===1;
+    if(!active) return;
+    for(let i=0;i<f.per;i++){
+      instances.push({taskId:task.id, name:task.name, effort:task.effort});
+    }
+  });
+  // sort heaviest first for better bin packing
+  instances.sort((a,b)=>b.effort-a.effort);
+
+  const dayLoad = [0,0,0,0,0,0,0];
+  const dayTasksToday = [new Set(),new Set(),new Set(),new Set(),new Set(),new Set(),new Set()];
+  const taskDaysUsed = {}; // taskId -> Set of day indices already used this week
+  const personLoad = [0,0];
+  const days = [[],[],[],[],[],[],[]];
+
+  instances.forEach((inst, idx)=>{
+    const usedDays = taskDaysUsed[inst.taskId] || new Set();
+    const isAdjacent = (d)=>{
+      for(const ud of usedDays){ if(Math.abs(ud-d)<=1) return true; }
+      return false;
+    };
+    // pass 1: skip same day AND days adjacent to another day this same task already landed on
+    let bestDay = -1, bestScore = Infinity;
+    for(let d=0; d<7; d++){
+      if(dayTasksToday[d].has(inst.taskId)) continue;
+      if(isAdjacent(d)) continue;
+      const penalty = isWeekend(d) ? 3.5 : 0;
+      const score = dayLoad[d] + penalty;
+      if(score < bestScore){ bestScore = score; bestDay = d; }
+    }
+    if(bestDay === -1){
+      // pass 2: relax the adjacency rule, still avoid same day
+      for(let d=0; d<7; d++){
+        if(dayTasksToday[d].has(inst.taskId)) continue;
+        const penalty = isWeekend(d) ? 3.5 : 0;
+        const score = dayLoad[d] + penalty;
+        if(score < bestScore){ bestScore = score; bestDay = d; }
+      }
+    }
+    if(bestDay === -1){
+      // pass 3: last resort, allow repeat on least loaded day
+      let minLoad = Infinity;
+      for(let d=0; d<7; d++){ if(dayLoad[d]<minLoad){minLoad=dayLoad[d]; bestDay=d;} }
+    }
+    dayLoad[bestDay] += inst.effort;
+    dayTasksToday[bestDay].add(inst.taskId);
+    usedDays.add(bestDay);
+    taskDaysUsed[inst.taskId] = usedDays;
+    // person with less accumulated load gets it
+    const person = personLoad[0] <= personLoad[1] ? 0 : 1;
+    personLoad[person] += inst.effort;
+    days[bestDay].push({
+      taskId: inst.taskId, name: inst.name, effort: inst.effort,
+      person, done:false
+    });
+  });
+
+  state.assignments = days;
+}
+
+function render(){
+  document.getElementById('name0').value = state.people[0];
+  document.getElementById('name1').value = state.people[1];
+  document.getElementById('weekLabel').textContent = 'SEMANA ' + state.weekCounter;
+
+  const freqSel = document.getElementById('newTaskFreq');
+  freqSel.innerHTML = FREQS.map(f=>`<option value="${f.id}">${f.label}</option>`).join('');
+
+  renderDays();
+  renderBank();
+}
+
+function renderDays(){
+  const el = document.getElementById('days');
+  el.innerHTML = '';
+  const today = new Date();
+  const mondayOffset = (today.getDay()+6)%7; // 0 if monday
+  const monday = new Date(today); monday.setDate(today.getDate()-mondayOffset);
+
+  DAY_NAMES.forEach((name, d)=>{
+    const dateObj = new Date(monday); dateObj.setDate(monday.getDate()+d);
+    const dateStr = dateObj.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+    const dayDiv = document.createElement('div');
+    dayDiv.className = 'day' + (isWeekend(d) ? ' weekend' : '');
+    const tasks = (state.assignments && state.assignments[d]) || [];
+    const totalEffort = tasks.reduce((s,t)=>s+t.effort,0);
+
+    let body = '';
+    if(tasks.length===0){
+      body = `<div class="empty-day">Nenhuma tarefa por aqui — dia livre.</div>`;
+    } else {
+      body = tasks.map((t,ti)=>{
+        const dotsHtml = [1,2,3].map(n=>`<span class="${n<=t.effort?'on':''}"></span>`).join('');
+        return `
+        <div class="task-card">
+          <span class="pin"></span>
+          <div class="check ${t.done?'done':''}" data-day="${d}" data-idx="${ti}" data-act="toggle"></div>
+          <div class="task-info">
+            <div class="task-name ${t.done?'done':''}">${escapeHtml(t.name)}</div>
+            <div class="task-sub"><span class="dots">${dotsHtml}</span></div>
+          </div>
+          <div class="person-chip chip${t.person}" data-day="${d}" data-idx="${ti}" data-act="person">${escapeHtml(state.people[t.person])}</div>
+          <button class="skip-btn" data-day="${d}" data-idx="${ti}" data-act="skip" title="Pular essa">✕</button>
+        </div>`;
+      }).join('');
+    }
+
+    dayDiv.innerHTML = `
+      <div class="day-head">
+        <span class="day-name">${name}</span>
+        <span class="day-meta">${dateStr} · ${totalEffort>0? '●'.repeat(Math.min(totalEffort,6)) : '—'}</span>
+      </div>
+      <div class="day-body">${body}</div>
+    `;
+    el.appendChild(dayDiv);
+  });
+
+  el.querySelectorAll('[data-act="toggle"]').forEach(elx=>{
+    elx.addEventListener('click', ()=>{
+      const d = +elx.dataset.day, i = +elx.dataset.idx;
+      state.assignments[d][i].done = !state.assignments[d][i].done;
+      renderDays(); scheduleSave();
+    });
+  });
+  el.querySelectorAll('[data-act="person"]').forEach(elx=>{
+    elx.addEventListener('click', ()=>{
+      const d = +elx.dataset.day, i = +elx.dataset.idx;
+      state.assignments[d][i].person = state.assignments[d][i].person===0?1:0;
+      renderDays(); scheduleSave();
+    });
+  });
+  el.querySelectorAll('[data-act="skip"]').forEach(elx=>{
+    elx.addEventListener('click', ()=>{
+      const d = +elx.dataset.day, i = +elx.dataset.idx;
+      state.assignments[d].splice(i,1);
+      renderDays(); scheduleSave();
+    });
+  });
+}
+
+function renderBank(){
+  const list = document.getElementById('bankList');
+  list.innerHTML = state.tasks.map(t=>`
+    <div class="bank-item">
+      <input type="text" value="${escapeHtml(t.name)}" data-id="${t.id}" data-field="name" />
+      <select data-id="${t.id}" data-field="freq">
+        ${FREQS.map(f=>`<option value="${f.id}" ${f.id===t.freq?'selected':''}>${f.label}</option>`).join('')}
+      </select>
+      <select data-id="${t.id}" data-field="effort">
+        <option value="1" ${t.effort==1?'selected':''}>leve</option>
+        <option value="2" ${t.effort==2?'selected':''}>médio</option>
+        <option value="3" ${t.effort==3?'selected':''}>pesado</option>
+      </select>
+      <button class="del" data-id="${t.id}">✕</button>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('input[data-field="name"]').forEach(inp=>{
+    inp.addEventListener('change', ()=>{
+      const t = state.tasks.find(x=>x.id===inp.dataset.id);
+      if(t){ t.name = inp.value.trim() || t.name; scheduleSave(); }
+    });
+  });
+  list.querySelectorAll('select[data-field="freq"]').forEach(sel=>{
+    sel.addEventListener('change', ()=>{
+      const t = state.tasks.find(x=>x.id===sel.dataset.id);
+      if(t){ t.freq = sel.value; scheduleSave(); }
+    });
+  });
+  list.querySelectorAll('select[data-field="effort"]').forEach(sel=>{
+    sel.addEventListener('change', ()=>{
+      const t = state.tasks.find(x=>x.id===sel.dataset.id);
+      if(t){ t.effort = +sel.value; scheduleSave(); }
+    });
+  });
+  list.querySelectorAll('.del').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      state.tasks = state.tasks.filter(x=>x.id!==btn.dataset.id);
+      renderBank(); scheduleSave();
+      showToast('Tarefa removida do banco. Clique em "Redistribuir" para atualizar a semana.');
+    });
+  });
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+}
+
+document.getElementById('name0').addEventListener('change', e=>{ state.people[0]=e.target.value||'Pessoa 1'; renderDays(); scheduleSave(); });
+document.getElementById('name1').addEventListener('change', e=>{ state.people[1]=e.target.value||'Pessoa 2'; renderDays(); scheduleSave(); });
+
+document.getElementById('bankToggle').addEventListener('click', ()=>{
+  document.getElementById('bank').classList.toggle('open');
+});
+
+document.getElementById('backupToggle').addEventListener('click', ()=>{
+  const box = document.getElementById('backupBox');
+  box.classList.toggle('open');
+  if(box.classList.contains('open')) refreshBackupText();
+});
+function refreshBackupText(){
+  document.getElementById('backupText').value = JSON.stringify(state);
+}
+document.getElementById('btnRefreshBackup').addEventListener('click', refreshBackupText);
+document.getElementById('btnCopyBackup').addEventListener('click', async ()=>{
+  refreshBackupText();
+  const ta = document.getElementById('backupText');
+  ta.select(); ta.setSelectionRange(0, 999999);
+  let copied = false;
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(ta.value);
+      copied = true;
+    }
+  }catch(e){ /* clipboard API blocked, fall back below */ }
+  if(!copied){
+    try{ copied = document.execCommand('copy'); }catch(e){ copied = false; }
+  }
+  showToast(copied ? 'Copiado! Cole em algum lugar seguro.' : 'Não consegui copiar automaticamente — selecione o texto e copie manualmente.');
+});
+document.getElementById('btnRestore').addEventListener('click', ()=>{
+  const raw = document.getElementById('restoreText').value.trim();
+  if(!raw) return;
+  try{
+    const parsed = JSON.parse(raw);
+    state = Object.assign(state, parsed);
+    render();
+    scheduleSave();
+    showToast('Backup carregado!');
+  }catch(e){
+    showToast('⚠ Esse texto não é um backup válido.');
+  }
+});
+
+document.getElementById('btnAddTask').addEventListener('click', ()=>{
+  const nameInp = document.getElementById('newTaskName');
+  const name = nameInp.value.trim();
+  if(!name) return;
+  const freq = document.getElementById('newTaskFreq').value;
+  const effort = +document.getElementById('newTaskEffort').value;
+  const id = 'custom-' + Date.now();
+  state.tasks.push({id, name, freq, effort});
+  nameInp.value='';
+  renderBank(); scheduleSave();
+  showToast('Tarefa adicionada. Clique em "Redistribuir" para incluir na semana.');
+});
+
+document.getElementById('btnRedistribute').addEventListener('click', ()=>{
+  distributeWeek();
+  renderDays(); scheduleSave();
+  showToast('Semana redistribuída.');
+});
+
+document.getElementById('btnNewWeek').addEventListener('click', ()=>{
+  state.weekCounter += 1;
+  distributeWeek();
+  render(); scheduleSave();
+  showToast('Nova semana criada.');
+});
+
+load();
+</script>
+</body>
+</html>

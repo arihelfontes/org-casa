@@ -402,8 +402,9 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
       </div>
       <div class="add-form">
         <button class="btn-ghost" id="btnResetWeekCounter">↺ Reiniciar contagem para Semana 1</button>
+        <button class="btn-ghost" id="btnResetScores">🗑️ Zerar corações, tarefas concluídas e atrasadas</button>
       </div>
-      <p class="hint">Isso só reseta o número da semana (útil se avançou demais sem querer). Pontos, histórico e tarefas da semana atual não são apagados.</p>
+      <p class="hint">O primeiro botão só reseta o número da semana (útil se avançou demais sem querer). Pontos, histórico e tarefas da semana atual não são apagados. O segundo zera todos os corações/estatísticas acumuladas (semana, mês, ano e gráfico) e limpa qualquer tarefa marcada como atrasada ou travada — as tarefas continuam existindo, só voltam ao normal.</p>
     </div>
 
     <div class="subtab-panel" id="panel-cat" style="display:none;">
@@ -1325,6 +1326,20 @@ document.getElementById('btnResetWeekCounter').addEventListener('click', ()=>{
   state.weekArchive = [];
   render(); scheduleSave();
   showToast('Contagem de semanas reiniciada — voltamos para a Semana 1.');
+});
+
+document.getElementById('btnResetScores').addEventListener('click', ()=>{
+  if(!confirm('Isso apaga TODO o histórico de corações/tarefas concluídas (estatísticas de semana, mês, ano e o gráfico zeram) e tira o selo de "atrasada"/"travada" de qualquer tarefa pendente — elas continuam na lista, só voltam ao normal. Essa ação não tem volta. Confirmar?')) return;
+  state.history = [];
+  (state.assignments||[]).forEach(day=>{
+    day.forEach(t=>{
+      if(t.late) t.late = false;
+      if(t.lateStreak) delete t.lateStreak;
+      if(t.historyId) delete t.historyId;
+    });
+  });
+  render(); scheduleSave();
+  showToast('Corações, tarefas concluídas e atrasadas zerados.');
 });
 
 document.getElementById('btnAddTask').addEventListener('click', ()=>{

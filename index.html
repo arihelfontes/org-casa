@@ -4,8 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mutirão da Casa</title>
+
+<!-- Adicionar à tela inicial (iOS e Android) -->
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mutirão">
+<meta name="theme-color" content="#EDEFE8">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%233F7D6E'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle'%3E%E2%99%A5%3C/text%3E%3C/svg%3E">
+<link rel="manifest" href='data:application/manifest+json,{"name":"Mutir%C3%A3o%20da%20Casa","short_name":"Mutir%C3%A3o","start_url":".","display":"standalone","background_color":"%23EDEFE8","theme_color":"%23EDEFE8"}'>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <style>
   :root{
     --paper:#EDEFE8;
@@ -73,6 +84,13 @@
   .person-pin input:focus{outline:none;border-bottom:1px solid var(--ink-soft);}
   .p0 .dot{background:var(--teal);}
   .p1 .dot{background:var(--rose);}
+  .crown{margin-left:5px;font-size:13px;}
+  .pause-btn{
+    background:none;border:none;font-size:13px;padding:2px 4px;margin-left:2px;
+    opacity:0.35;filter:grayscale(1);flex:none;
+  }
+  .pause-btn.on{opacity:1;filter:none;}
+  .person-pin.paused{outline:2px solid #C98A2E;outline-offset:-2px;}
 
   .week-bar{
     display:flex;align-items:center;justify-content:space-between;
@@ -117,6 +135,17 @@
   }
   .day-meta{
     font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);
+    text-align:right;
+  }
+  .day-meta-persons{display:block;margin-top:2px;}
+  .task-card.late{
+    background:rgba(201,138,46,0.10);
+    border-radius:12px;
+  }
+  .late-badge{
+    font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;
+    color:#A24747;background:#F6DEDE;padding:2px 6px;border-radius:6px;
+    white-space:nowrap;
   }
   .day-body{padding:8px 10px 12px;}
   .empty-day{
@@ -163,6 +192,32 @@
   }
   .skip-btn:hover{opacity:1;}
 
+  .drag-handle{
+    cursor:grab; touch-action:none; color:var(--ink-soft); font-size:14px;
+    padding:0 2px; flex:none; opacity:0.5; user-select:none;
+  }
+  .drag-handle:active{cursor:grabbing;}
+  .day.drop-hover{outline:2px dashed var(--ink-soft); outline-offset:-2px;}
+
+  .quickadd-btn{
+    background:none;border:1px solid var(--line);color:var(--ink-soft);
+    width:18px;height:18px;border-radius:6px;font-size:12px;line-height:1;
+    padding:0;margin-left:6px;vertical-align:middle;cursor:pointer;
+  }
+  .quickadd-form{
+    padding:10px 16px;border-bottom:1px dashed var(--line);
+    background:rgba(0,0,0,0.02);
+  }
+  .quickadd-form input[type=text]{
+    width:100%;padding:8px 10px;border-radius:9px;border:1px solid var(--line);
+    font-size:13px;font-family:'Inter',sans-serif;margin-bottom:6px;
+  }
+  .qa-row{display:flex;gap:6px;margin-bottom:6px;}
+  .qa-row select, .qa-row input[type=number]{
+    padding:7px 6px;border-radius:8px;border:1px solid var(--line);font-size:11.5px;
+  }
+  .qa-row select{flex:1;}
+
   /* bank */
   .bank-toggle{
     margin-top:22px;width:100%;background:transparent;border:1px dashed var(--line);
@@ -203,7 +258,7 @@
   }
   .stat-name{font-family:'Fraunces',serif;font-weight:600;font-size:15px;margin-bottom:6px;}
   .stat-line{font-size:12.5px;color:var(--ink-soft);margin-bottom:6px;}
-  .hearts{font-size:14px;letter-spacing:1px;}
+  .hearts{font-size:14px;letter-spacing:1px;word-break:break-all;line-height:1.6;}
   .bar-track{
     background:var(--line);border-radius:100px;height:8px;overflow:hidden;margin-top:4px;
   }
@@ -272,8 +327,8 @@
     <h1>Mutirão da Casa</h1>
     <p class="subtitle">Tarefas espalhadas pela semana — sem sobrecarregar o fim de semana.</p>
     <div class="people-row">
-      <div class="person-pin p0"><span class="dot"></span><input id="name0" maxlength="16" /></div>
-      <div class="person-pin p1"><span class="dot"></span><input id="name1" maxlength="16" /></div>
+      <div class="person-pin p0"><span class="dot"></span><input id="name0" maxlength="16" /><span class="crown" id="crown0"></span><button class="pause-btn" id="pauseBtn0" title="Marcar pausa/férias">🌴</button></div>
+      <div class="person-pin p1"><span class="dot"></span><input id="name1" maxlength="16" /><span class="crown" id="crown1"></span><button class="pause-btn" id="pauseBtn1" title="Marcar pausa/férias">🌴</button></div>
     </div>
     <div id="autosaveWarning" style="display:none;margin-top:12px;background:var(--rose-soft);color:var(--rose);border-radius:12px;padding:10px 12px;font-size:12px;font-weight:500;">
       ⚠ Não consegui sincronizar agora — verifique sua conexão com a internet.
@@ -283,6 +338,7 @@
   <div class="week-bar">
     <span class="week-label" id="weekLabel">SEMANA 1</span>
     <div class="actions">
+      <button class="btn-ghost" id="btnPrevWeek">← Semana anterior</button>
       <button class="btn-ghost" id="btnRedistribute">Redistribuir</button>
       <button class="btn-primary" id="btnNewWeek">Nova semana →</button>
     </div>
@@ -397,7 +453,9 @@ let state = {
   weekKey: null,
   assignments: null, // {0:[{taskId,name,effort,person,done,category,minutes}], ...}
   theme: { paper: "#EDEFE8", ink: "#233229", person0: "#3F7D6E", person1: "#B15C68" },
-  history: [], // {id, date:'YYYY-MM-DD', person, effort, category, name} — um item por tarefa concluída
+  history: [], // {id, date:'YYYY-MM-DD', person, effort, minutes, category, name, batchId?, penalty?} — pode ser negativo (penalidade)
+  weekArchive: [], // pilha de snapshots para "Voltar semana" (multi-nível)
+  pause: [false, false], // modo férias/pausa por pessoa
 };
 
 function hexToRgb(hex){
@@ -505,6 +563,12 @@ function migrateState(){
     state.categories = DEFAULT_CATEGORIES.map(c=>({...c}));
   }
   if(!Array.isArray(state.history)) state.history = [];
+  if(!Array.isArray(state.pause)) state.pause = [false, false];
+  if(!Array.isArray(state.weekArchive)){
+    // migra o snapshot único antigo (se existir) para a nova pilha multi-nível
+    state.weekArchive = state.previousWeekSnapshot ? [state.previousWeekSnapshot] : [];
+  }
+  delete state.previousWeekSnapshot;
   (state.tasks||[]).forEach(t=>{
     if(!t.category) t.category = 'geral';
     if(t.minutes==null) t.minutes = 15;
@@ -542,8 +606,23 @@ function showToast(msg){
 
 function isWeekend(dayIdx){ return dayIdx===5 || dayIdx===6; }
 
+function recentLoadScore(days){
+  days = days || 28;
+  const scores = [0,0];
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-days);
+  const cutoffStr = cutoff.toISOString().slice(0,10);
+  (state.history||[]).forEach(h=>{
+    if(h.penalty) return; // só carga real feita conta pro viés, não penalidades
+    if(h.date < cutoffStr) return;
+    if(scores[h.person]==null) return;
+    scores[h.person] += (h.effort||0) + ((h.minutes||0)/15);
+  });
+  return scores;
+}
+
 function distributeWeek(isFirst){
   const wc = state.weekCounter;
+  const pause = state.pause || [false,false];
   // build instance list
   let instances = [];
   state.tasks.forEach(task=>{
@@ -554,14 +633,19 @@ function distributeWeek(isFirst){
       instances.push({taskId:task.id, name:task.name, effort:task.effort, category:task.category||'geral', minutes:task.minutes||15, allowedDays:task.allowedDays||[]});
     }
   });
-  // sort heaviest first for better bin packing
-  instances.sort((a,b)=>b.effort-a.effort);
+  // sort by combined weight+time score, heaviest first, for better bin packing
+  const combinedScore = (inst)=> inst.effort + (inst.minutes||0)/15;
+  instances.sort((a,b)=>combinedScore(b)-combinedScore(a));
 
   const dayLoad = [0,0,0,0,0,0,0];
   const dayTasksToday = [new Set(),new Set(),new Set(),new Set(),new Set(),new Set(),new Set()];
   const taskDaysUsed = {}; // taskId -> Set of day indices already used this week
-  const personLoad = [0,0];
+  // viés de justiça de longo prazo: quem trabalhou mais nos últimos 28 dias começa "mais carregado"
+  const recent = recentLoadScore(28);
+  const personLoad = [recent[0]*0.4, recent[1]*0.4];
   const days = [[],[],[],[],[],[],[]];
+  const availablePeople = [0,1].filter(p=>!pause[p]);
+  const forcedPerson = availablePeople.length===1 ? availablePeople[0] : null;
 
   instances.forEach((inst, idx)=>{
     const usedDays = taskDaysUsed[inst.taskId] || new Set();
@@ -570,6 +654,7 @@ function distributeWeek(isFirst){
       return false;
     };
     const allowed = (d)=> (!inst.allowedDays || inst.allowedDays.length===0) ? true : inst.allowedDays.includes(d);
+    const score = combinedScore(inst);
     // pass 1: skip same day AND days adjacent to another day this same task already landed on
     let bestDay = -1, bestScore = Infinity;
     for(let d=0; d<7; d++){
@@ -577,8 +662,8 @@ function distributeWeek(isFirst){
       if(dayTasksToday[d].has(inst.taskId)) continue;
       if(isAdjacent(d)) continue;
       const penalty = isWeekend(d) ? 3.5 : 0;
-      const score = dayLoad[d] + penalty;
-      if(score < bestScore){ bestScore = score; bestDay = d; }
+      const s = dayLoad[d] + penalty;
+      if(s < bestScore){ bestScore = s; bestDay = d; }
     }
     if(bestDay === -1){
       // pass 2: relax the adjacency rule, still avoid same day
@@ -586,8 +671,8 @@ function distributeWeek(isFirst){
         if(!allowed(d)) continue;
         if(dayTasksToday[d].has(inst.taskId)) continue;
         const penalty = isWeekend(d) ? 3.5 : 0;
-        const score = dayLoad[d] + penalty;
-        if(score < bestScore){ bestScore = score; bestDay = d; }
+        const s = dayLoad[d] + penalty;
+        if(s < bestScore){ bestScore = s; bestDay = d; }
       }
     }
     if(bestDay === -1){
@@ -602,13 +687,13 @@ function distributeWeek(isFirst){
       // truly no allowed day had room (shouldn't normally happen) — skip this instance rather than break a hard restriction
       return;
     }
-    dayLoad[bestDay] += inst.effort;
+    dayLoad[bestDay] += score;
     dayTasksToday[bestDay].add(inst.taskId);
     usedDays.add(bestDay);
     taskDaysUsed[inst.taskId] = usedDays;
-    // person with less accumulated load gets it
-    const person = personLoad[0] <= personLoad[1] ? 0 : 1;
-    personLoad[person] += inst.effort;
+    // pessoa com menos carga acumulada (peso + tempo) fica com a tarefa — respeitando pausa
+    const person = forcedPerson!=null ? forcedPerson : (personLoad[0] <= personLoad[1] ? 0 : 1);
+    personLoad[person] += score;
     days[bestDay].push({
       taskId: inst.taskId, name: inst.name, effort: inst.effort,
       category: inst.category, minutes: inst.minutes,
@@ -619,11 +704,41 @@ function distributeWeek(isFirst){
   state.assignments = days;
 }
 
+function computeLifetimeHearts(){
+  const totals = [0,0];
+  (state.history||[]).forEach(h=>{
+    if(totals[h.person]!=null) totals[h.person] += h.effort;
+  });
+  return totals;
+}
+function updateCrowns(){
+  const c0 = document.getElementById('crown0');
+  const c1 = document.getElementById('crown1');
+  if(!c0 || !c1) return;
+  c0.textContent = ''; c1.textContent = '';
+  const totals = computeLifetimeHearts();
+  if(totals[0] === totals[1]) return;
+  if(totals[0] > totals[1]) c0.textContent = '👑'; else c1.textContent = '👑';
+}
+function updatePauseUI(){
+  const pause = state.pause || [false,false];
+  [0,1].forEach(p=>{
+    const btn = document.getElementById('pauseBtn'+p);
+    const pin = btn ? btn.closest('.person-pin') : null;
+    if(!btn || !pin) return;
+    btn.classList.toggle('on', !!pause[p]);
+    pin.classList.toggle('paused', !!pause[p]);
+    btn.title = pause[p] ? (state.people[p]+' está de pausa — clique para voltar') : 'Marcar pausa/férias';
+  });
+}
+
 function render(){
   applyTheme();
   document.getElementById('name0').value = state.people[0];
   document.getElementById('name1').value = state.people[1];
   document.getElementById('weekLabel').textContent = 'SEMANA ' + state.weekCounter;
+  updateCrowns();
+  updatePauseUI();
 
   const freqSel = document.getElementById('newTaskFreq');
   freqSel.innerHTML = FREQS.map(f=>`<option value="${f.id}">${f.label}</option>`).join('');
@@ -648,23 +763,28 @@ function renderDays(){
     const dateStr = dateObj.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
     const dayDiv = document.createElement('div');
     dayDiv.className = 'day' + (isWeekend(d) ? ' weekend' : '');
+    dayDiv.dataset.dayIndex = d;
     const tasks = (state.assignments && state.assignments[d]) || [];
     const totalEffort = tasks.reduce((s,t)=>s+t.effort,0);
-    const totalMinutes = tasks.reduce((s,t)=>s+(t.minutes||0),0);
+    const minutesByPerson = [0,0];
+    tasks.forEach(t=>{ minutesByPerson[t.person] += (t.minutes||0); });
 
     let body = '';
     if(tasks.length===0){
       body = `<div class="empty-day">Nenhuma tarefa por aqui — dia livre.</div>`;
     } else {
       body = tasks.map((t,ti)=>{
-        const dotsHtml = [1,2,3].map(n=>`<span class="${n<=t.effort?'on':''}">${n<=t.effort?'♥':'♡'}</span>`).join('');
+        const dotsHtml = t.late
+          ? '👎'.repeat(Math.max(1,t.effort))
+          : [1,2,3].map(n=>`<span class="${n<=t.effort?'on':''}">${n<=t.effort?'♥':'♡'}</span>`).join('');
         const cat = catById(t.category);
         return `
-        <div class="task-card">
+        <div class="task-card ${t.late?'late':''}" data-day="${d}" data-idx="${ti}">
+          <span class="drag-handle" title="Segurar e arrastar para outro dia">⠿</span>
           <span class="cat-dot" style="background:${cat.color}" title="${escapeHtml(cat.name)}"></span>
           <div class="check ${t.done?'done':''}" data-day="${d}" data-idx="${ti}" data-act="toggle"></div>
           <div class="task-info">
-            <div class="task-name ${t.done?'done':''}">${escapeHtml(t.name)}</div>
+            <div class="task-name ${t.done?'done':''}">${t.late?`<span class="late-badge">${(t.lateStreak||0)>=3?'🚨 TRAVADA':'ATRASADA'}</span> `:''}${escapeHtml(t.name)}</div>
             <div class="task-sub"><span class="dots">${dotsHtml}</span> <span class="mins-badge">· ${t.minutes||0}min</span></div>
           </div>
           <div class="person-chip chip${t.person}" data-day="${d}" data-idx="${ti}" data-act="person">${escapeHtml(state.people[t.person])}</div>
@@ -673,10 +793,34 @@ function renderDays(){
       }).join('');
     }
 
+    const timeParts = [];
+    if(minutesByPerson[0]>0) timeParts.push(`<span style="color:var(--teal)">${escapeHtml(state.people[0])} ≈${minutesByPerson[0]}min</span>`);
+    if(minutesByPerson[1]>0) timeParts.push(`<span style="color:var(--rose)">${escapeHtml(state.people[1])} ≈${minutesByPerson[1]}min</span>`);
+    const timeLine = timeParts.length ? timeParts.join(' · ') : '—';
+
     dayDiv.innerHTML = `
       <div class="day-head">
-        <span class="day-name">${name}</span>
-        <span class="day-meta">${dateStr} · ${totalEffort>0? '♥'.repeat(totalEffort) : '—'} · ${totalMinutes>0 ? '≈'+totalMinutes+'min' : '—'}</span>
+        <span class="day-name">${name} <button class="quickadd-btn" data-day="${d}" title="Adicionar tarefa só neste dia">+</button></span>
+        <span class="day-meta">${dateStr} · ${totalEffort>0? '♥'.repeat(totalEffort) : '—'}<span class="day-meta-persons">${timeLine}</span></span>
+      </div>
+      <div class="quickadd-form" id="quickadd-${d}" style="display:none;">
+        <input type="text" class="qa-name" placeholder="Nome da tarefa (ex: limpei o banheiro)" />
+        <div class="qa-row">
+          <select class="qa-person">
+            <option value="0">${escapeHtml(state.people[0])}</option>
+            <option value="1">${escapeHtml(state.people[1])}</option>
+          </select>
+          <select class="qa-effort">
+            <option value="1">leve ♥</option>
+            <option value="2" selected>médio ♥♥</option>
+            <option value="3">pesado ♥♥♥</option>
+          </select>
+          <input type="number" class="qa-minutes" min="1" value="15" style="width:52px;" />
+        </div>
+        <div class="qa-row">
+          <button class="btn-primary qa-add" data-day="${d}">Adicionar só aqui</button>
+          <button class="btn-ghost qa-cancel" data-day="${d}">Cancelar</button>
+        </div>
       </div>
       <div class="day-body">${body}</div>
     `;
@@ -688,11 +832,11 @@ function renderDays(){
       const d = +elx.dataset.day, i = +elx.dataset.idx;
       const t = state.assignments[d][i];
       t.done = !t.done;
-      if(t.done){
+      if(t.done && !t.late){
         const id = 'h' + Date.now() + '-' + Math.random().toString(36).slice(2,7);
-        state.history.push({ id, date: new Date().toISOString().slice(0,10), person: t.person, effort: t.effort, category: t.category, name: t.name });
+        state.history.push({ id, date: new Date().toISOString().slice(0,10), person: t.person, effort: t.effort, minutes: t.minutes, category: t.category, name: t.name });
         t.historyId = id;
-      } else if(t.historyId){
+      } else if(!t.done && t.historyId){
         state.history = state.history.filter(h=>h.id!==t.historyId);
         delete t.historyId;
       }
@@ -717,6 +861,41 @@ function renderDays(){
       renderDays(); renderStats(); scheduleSave();
     });
   });
+
+  el.querySelectorAll('.quickadd-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const d = btn.dataset.day;
+      el.querySelectorAll('.quickadd-form').forEach(f=>{ if(f.id!=='quickadd-'+d) f.style.display='none'; });
+      const form = document.getElementById('quickadd-'+d);
+      form.style.display = form.style.display==='none' ? 'block' : 'none';
+      if(form.style.display==='block') form.querySelector('.qa-name').focus();
+    });
+  });
+  el.querySelectorAll('.qa-cancel').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.getElementById('quickadd-'+btn.dataset.day).style.display = 'none';
+    });
+  });
+  el.querySelectorAll('.qa-add').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const d = +btn.dataset.day;
+      const form = document.getElementById('quickadd-'+d);
+      const name = form.querySelector('.qa-name').value.trim();
+      if(!name) return;
+      const person = +form.querySelector('.qa-person').value;
+      const effort = +form.querySelector('.qa-effort').value;
+      const minutes = Math.max(1, +form.querySelector('.qa-minutes').value || 15);
+      if(!state.assignments[d]) state.assignments[d] = [];
+      state.assignments[d].push({
+        taskId: 'adhoc-' + Date.now(), name, effort, minutes,
+        category: 'geral', person, done:false
+      });
+      renderDays(); renderStats(); scheduleSave();
+      showToast('Tarefa adicionada só nesse dia.');
+    });
+  });
+
+  attachDragHandlers();
 }
 
 const DAY_TOGGLE_LABELS = ["S","T","Q","Q","S","S","D"];
@@ -879,6 +1058,7 @@ function renderStats(){
       <button class="subtab-btn ${statsRange==='week'?'on':''}" data-range="week">Semana</button>
       <button class="subtab-btn ${statsRange==='month'?'on':''}" data-range="month">Mês</button>
       <button class="subtab-btn ${statsRange==='year'?'on':''}" data-range="year">Ano</button>
+      <button class="subtab-btn ${statsRange==='chart'?'on':''}" data-range="chart">📈 Gráfico</button>
     </div>
     <div id="statsContent"></div>
   `;
@@ -888,25 +1068,39 @@ function renderStats(){
   renderStatsContent();
 }
 
+const PRIZES = {
+  week: '🍔 Escolhe o delivery de domingo à noite',
+  month: '💕 Escolhe o date do mês',
+  year: '✈️ Escolhe a viagem de Carnaval',
+};
+
 function renderStatsContent(){
   const content = document.getElementById('statsContent');
   if(!content) return;
 
+  if(statsRange==='chart'){
+    renderTaskChart(content);
+    return;
+  }
+
   if(statsRange==='week'){
     const stats = computeStats();
     const grandTotalEffort = Math.max(1, stats[0].totalEffort + stats[1].totalEffort);
+    const leader = stats[0].doneEffort===stats[1].doneEffort ? -1 : (stats[0].doneEffort>stats[1].doneEffort ? 0 : 1);
     content.innerHTML = [0,1].map(p=>{
       const s = stats[p];
       const pct = Math.round((s.totalEffort / grandTotalEffort) * 100);
       const color = p===0 ? 'var(--teal)' : 'var(--rose)';
+      const isLeader = p===leader;
       return `
       <div class="stat-block">
-        <div class="stat-name" style="color:${color}">${escapeHtml(state.people[p])}</div>
+        <div class="stat-name" style="color:${color}">${escapeHtml(state.people[p])}${isLeader?' <span class="crown">👑</span>':''}</div>
         <div class="stat-line">${s.done} de ${s.total} tarefas concluídas nesta semana</div>
         <div class="stat-line">Carga desta semana: ${s.totalEffort} pts (${pct}% do total das duas)</div>
         <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
         <div class="stat-line" style="margin-top:8px;">Corações coletados (tarefas concluídas):</div>
-        <div class="hearts" style="color:${color}">${'♥'.repeat(s.doneEffort) || '—'}</div>
+        <div class="hearts" style="color:${color}">${s.doneEffort>0 ? ('♥'.repeat(Math.min(s.doneEffort,30)) + (s.doneEffort>30?` +${s.doneEffort-30}`:'')) : '—'}</div>
+        ${isLeader ? `<div class="stat-line" style="margin-top:8px;font-weight:600;color:${color}">👑 ${PRIZES.week}</div>` : ''}
       </div>`;
     }).join('') + `<p class="hint">Cada coração = 1 ponto de dificuldade de uma tarefa marcada como feita. Esses números são só da semana atual — zeram quando vocês clicam em "Nova semana".</p>`;
     return;
@@ -919,21 +1113,79 @@ function renderStatsContent(){
   const periodLabel = statsRange==='month' ? 'neste mês' : 'neste ano';
   const stats = computeHistoryStats(filterFn);
   const grandTotal = Math.max(1, stats[0].effort + stats[1].effort);
+  const leader = stats[0].effort===stats[1].effort ? -1 : (stats[0].effort>stats[1].effort ? 0 : 1);
 
   content.innerHTML = [0,1].map(p=>{
     const s = stats[p];
     const pct = Math.round((s.effort / grandTotal) * 100);
     const color = p===0 ? 'var(--teal)' : 'var(--rose)';
     const heartsCapped = '♥'.repeat(Math.min(s.effort, 30)) + (s.effort>30 ? ` +${s.effort-30}` : '');
+    const isLeader = p===leader;
     return `
     <div class="stat-block">
-      <div class="stat-name" style="color:${color}">${escapeHtml(state.people[p])}</div>
+      <div class="stat-name" style="color:${color}">${escapeHtml(state.people[p])}${isLeader?' <span class="crown">👑</span>':''}</div>
       <div class="stat-line">${s.count} tarefas concluídas ${periodLabel}</div>
       <div class="stat-line">${s.effort} pts coletados (${pct}% do total das duas)</div>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
       <div class="hearts" style="color:${color}">${s.effort>0 ? heartsCapped : '—'}</div>
+      ${isLeader ? `<div class="stat-line" style="margin-top:8px;font-weight:600;color:${color}">👑 ${PRIZES[statsRange]}</div>` : ''}
     </div>`;
   }).join('') + `<p class="hint">Calculado a partir do histórico de tarefas concluídas — só conta a partir de agora (marcações feitas antes dessa atualização não entram).</p>`;
+}
+
+let taskChartInstance = null;
+function renderTaskChart(content){
+  const counts = {}; // taskName -> [count0, count1]
+  (state.history||[]).forEach(h=>{
+    if(h.penalty) return; // só tarefas de fato concluídas
+    if(!counts[h.name]) counts[h.name] = [0,0];
+    counts[h.name][h.person] += 1;
+  });
+  const labels = Object.keys(counts);
+
+  if(labels.length===0){
+    content.innerHTML = `<p class="hint">Ainda não há tarefas concluídas suficientes no histórico pra montar o gráfico. Vai aparecendo conforme vocês forem marcando tarefas como feitas.</p>`;
+    return;
+  }
+  if(typeof Chart === 'undefined'){
+    content.innerHTML = `<p class="hint">⚠ Não consegui carregar a biblioteca do gráfico (verifique sua conexão com a internet).</p>`;
+    return;
+  }
+
+  content.innerHTML = `
+    <div class="stat-block">
+      <div style="position:relative;height:280px;"><canvas id="taskChart"></canvas></div>
+      <p class="hint" style="margin-top:10px;">Cada ponto é quantas vezes cada uma concluiu aquela tarefa (desde que o histórico começou a ser guardado). Linhas bem separadas ou cheias de picos = uma está puxando mais aquela tarefa específica.</p>
+    </div>
+  `;
+
+  const data0 = labels.map(l=>counts[l][0]);
+  const data1 = labels.map(l=>counts[l][1]);
+  const styles = getComputedStyle(document.documentElement);
+  const teal = styles.getPropertyValue('--teal').trim() || '#3F7D6E';
+  const rose = styles.getPropertyValue('--rose').trim() || '#B15C68';
+
+  if(taskChartInstance){ taskChartInstance.destroy(); }
+  const ctx = document.getElementById('taskChart').getContext('2d');
+  taskChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: state.people[0], data: data0, borderColor: teal, backgroundColor: teal, tension: 0.25, pointRadius: 4 },
+        { label: state.people[1], data: data1, borderColor: rose, backgroundColor: rose, tension: 0.25, pointRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
+        x: { ticks: { autoSkip: false, maxRotation: 60, minRotation: 30, font: { size: 9 } } }
+      },
+      plugins: { legend: { position: 'top' } }
+    }
+  });
 }
 
 function escapeHtml(s){
@@ -942,6 +1194,18 @@ function escapeHtml(s){
 
 document.getElementById('name0').addEventListener('change', e=>{ state.people[0]=e.target.value||'Pessoa 1'; renderDays(); scheduleSave(); });
 document.getElementById('name1').addEventListener('change', e=>{ state.people[1]=e.target.value||'Pessoa 2'; renderDays(); scheduleSave(); });
+
+[0,1].forEach(p=>{
+  document.getElementById('pauseBtn'+p).addEventListener('click', ()=>{
+    if(!Array.isArray(state.pause)) state.pause = [false,false];
+    state.pause[p] = !state.pause[p];
+    updatePauseUI();
+    showToast(state.pause[p]
+      ? `${state.people[p]} está de pausa — as tarefas vão para ${state.people[p===0?1:0]}, sem penalidade.`
+      : `${state.people[p]} voltou da pausa.`);
+    scheduleSave();
+  });
+});
 
 document.getElementById('customizeToggle').addEventListener('click', ()=>{
   document.getElementById('customizeBox').classList.toggle('open');
@@ -1013,18 +1277,155 @@ document.getElementById('btnAddTask').addEventListener('click', ()=>{
   showToast('Tarefa adicionada. Clique em "Redistribuir" para incluir na semana.');
 });
 
+function placeLateTask(lt){
+  const taskDef = state.tasks.find(x=>x.id===lt.taskId);
+  let day = 0;
+  if(taskDef && taskDef.allowedDays && taskDef.allowedDays.length){ day = taskDef.allowedDays[0]; }
+  if(!state.assignments[day]) state.assignments[day] = [];
+  state.assignments[day].unshift({...lt});
+}
+
 document.getElementById('btnRedistribute').addEventListener('click', ()=>{
+  // preserva tarefas atrasadas (não regeneradas pelo banco) antes de redistribuir as da semana
+  const lateTasks = [];
+  (state.assignments||[]).forEach(day=>{
+    day.forEach(t=>{ if(t.late) lateTasks.push({...t}); });
+  });
   distributeWeek();
+  lateTasks.forEach(placeLateTask);
   renderDays(); renderStats(); scheduleSave();
   showToast('Semana redistribuída.');
 });
 
+const WEEK_ARCHIVE_LIMIT = 15;
+
 document.getElementById('btnNewWeek').addEventListener('click', ()=>{
+  const batchId = 'b' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
+  const pause = state.pause || [false,false];
+  const leftovers = [];
+  (state.assignments||[]).forEach(day=>{
+    day.forEach(t=>{
+      if(!t.done){
+        const newStreak = (t.lateStreak||0) + 1;
+        // depois de 2 semanas seguidas atrasada, ela "trava": para de penalizar e vira um alerta
+        const stuck = newStreak >= 3;
+        if(!stuck && !pause[t.person]){
+          state.history.push({
+            id: 'h' + Date.now() + '-' + Math.random().toString(36).slice(2,7),
+            date: new Date().toISOString().slice(0,10),
+            person: t.person, effort: -t.effort, minutes: t.minutes, category: t.category, name: t.name,
+            batchId, penalty: true
+          });
+        }
+        leftovers.push({...t, lateStreak: newStreak});
+      }
+    });
+  });
+
+  if(!Array.isArray(state.weekArchive)) state.weekArchive = [];
+  state.weekArchive.push({
+    weekCounter: state.weekCounter,
+    assignments: JSON.parse(JSON.stringify(state.assignments)),
+    historyBatchId: batchId
+  });
+  if(state.weekArchive.length > WEEK_ARCHIVE_LIMIT) state.weekArchive.shift();
+
   state.weekCounter += 1;
   distributeWeek();
+  leftovers.forEach(lt=>{
+    placeLateTask({
+      taskId: lt.taskId, name: lt.name, effort: lt.effort,
+      category: lt.category, minutes: lt.minutes,
+      person: lt.person, done: false, late: true, lateStreak: lt.lateStreak
+    });
+  });
+
   render(); scheduleSave();
-  showToast('Nova semana criada.');
+  const stuckCount = leftovers.filter(l=>l.lateStreak>=3).length;
+  let msg = leftovers.length
+    ? `Nova semana — ${leftovers.length} tarefa${leftovers.length>1?'s':''} atrasada${leftovers.length>1?'s':''} levada${leftovers.length>1?'s':''} junto.`
+    : 'Nova semana criada.';
+  if(stuckCount) msg += ` ${stuckCount} está travada há semanas — vale conversar sobre ela.`;
+  showToast(msg);
 });
+
+document.getElementById('btnPrevWeek').addEventListener('click', ()=>{
+  if(!Array.isArray(state.weekArchive) || state.weekArchive.length===0){
+    showToast('⚠ Nada para desfazer.');
+    return;
+  }
+  const snap = state.weekArchive.pop();
+  state.weekCounter = snap.weekCounter;
+  state.assignments = snap.assignments;
+  state.history = state.history.filter(h=>h.batchId !== snap.historyBatchId);
+  render(); scheduleSave();
+  showToast(`Voltou para a semana ${snap.weekCounter}. (${state.weekArchive.length} nível(is) de desfazer restantes)`);
+});
+
+let dragState = null;
+function attachDragHandlers(){
+  document.querySelectorAll('.drag-handle').forEach(h=>{
+    h.addEventListener('pointerdown', onDragStart);
+  });
+}
+function onDragStart(e){
+  e.preventDefault();
+  const card = e.target.closest('.task-card');
+  if(!card) return;
+  const day = +card.dataset.day, idx = +card.dataset.idx;
+  const rect = card.getBoundingClientRect();
+  const ghost = card.cloneNode(true);
+  ghost.style.position = 'fixed';
+  ghost.style.left = rect.left + 'px';
+  ghost.style.top = rect.top + 'px';
+  ghost.style.width = rect.width + 'px';
+  ghost.style.opacity = '0.95';
+  ghost.style.pointerEvents = 'none';
+  ghost.style.zIndex = '9999';
+  ghost.style.boxShadow = '0 10px 28px rgba(0,0,0,0.28)';
+  ghost.style.transform = 'rotate(-1deg)';
+  document.body.appendChild(ghost);
+  card.style.opacity = '0.25';
+  dragState = { day, idx, ghost, startX:e.clientX, startY:e.clientY, origLeft:rect.left, origTop:rect.top, sourceCard: card };
+  window.addEventListener('pointermove', onDragMove);
+  window.addEventListener('pointerup', onDragEnd);
+}
+function onDragMove(e){
+  if(!dragState) return;
+  const dx = e.clientX - dragState.startX;
+  const dy = e.clientY - dragState.startY;
+  dragState.ghost.style.left = (dragState.origLeft + dx) + 'px';
+  dragState.ghost.style.top = (dragState.origTop + dy) + 'px';
+  document.querySelectorAll('.day').forEach(dEl=>dEl.classList.remove('drop-hover'));
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const dayEl = el && el.closest ? el.closest('.day') : null;
+  if(dayEl) dayEl.classList.add('drop-hover');
+}
+function onDragEnd(e){
+  if(!dragState) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const dayEl = el && el.closest ? el.closest('.day') : null;
+  document.querySelectorAll('.day').forEach(dEl=>dEl.classList.remove('drop-hover'));
+  dragState.ghost.remove();
+  if(dragState.sourceCard) dragState.sourceCard.style.opacity = '';
+
+  if(dayEl){
+    const targetDay = +dayEl.dataset.dayIndex;
+    if(!isNaN(targetDay) && targetDay !== dragState.day){
+      const arr = state.assignments[dragState.day];
+      if(arr && arr[dragState.idx]){
+        const [moved] = arr.splice(dragState.idx, 1);
+        if(!state.assignments[targetDay]) state.assignments[targetDay] = [];
+        state.assignments[targetDay].push(moved);
+        renderDays(); renderStats(); scheduleSave();
+        showToast('Tarefa movida de dia.');
+      }
+    }
+  }
+  window.removeEventListener('pointermove', onDragMove);
+  window.removeEventListener('pointerup', onDragEnd);
+  dragState = null;
+}
 
 load();
 </script>

@@ -12,11 +12,40 @@
 <meta name="apple-mobile-web-app-title" content="Mutirão">
 <meta name="theme-color" content="#EDEFE8">
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%233F7D6E'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle'%3E%E2%99%A5%3C/text%3E%3C/svg%3E">
-<link rel="manifest" href='data:application/manifest+json,{"name":"Mutir%C3%A3o%20da%20Casa","short_name":"Mutir%C3%A3o","start_url":".","display":"standalone","background_color":"%23EDEFE8","theme_color":"%23EDEFE8"}'>
+<link rel="manifest" href='data:application/manifest+json,{"name":"Mutir%C3%A3o%20da%20Casa","short_name":"Mutir%C3%A3o","start_url":".","display":"standalone","background_color":"%23EDEFE8","theme_color":"%23EDEFE8","icons":[{"src":"data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Crect width=\'100\' height=\'100\' rx=\'22\' fill=\'%233F7D6E\'/%3E%3Ctext x=\'50\' y=\'68\' font-size=\'58\' text-anchor=\'middle\'%3E%E2%99%A5%3C/text%3E%3C/svg%3E","sizes":"192x192","type":"image/svg+xml","purpose":"any"},{"src":"data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Crect width=\'100\' height=\'100\' rx=\'22\' fill=\'%233F7D6E\'/%3E%3Ctext x=\'50\' y=\'68\' font-size=\'58\' text-anchor=\'middle\'%3E%E2%99%A5%3C/text%3E%3C/svg%3E","sizes":"512x512","type":"image/svg+xml","purpose":"any"}]}'>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js" onerror="this.onerror=null;var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js';document.head.appendChild(s);"></script>
+<script>
+// Registra um service worker (necessário para o navegador considerar o site "instalável"
+// e para funcionar offline depois de instalado). Só funciona em https:// ou localhost —
+// não funciona se o arquivo for aberto direto do computador (file://).
+if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
+  window.addEventListener('load', () => {
+    const swCode = `
+      const CACHE = 'mutirao-casa-v1';
+      self.addEventListener('install', e => { self.skipWaiting(); });
+      self.addEventListener('activate', e => { self.clients.claim(); });
+      self.addEventListener('fetch', e => {
+        if(e.request.method !== 'GET') return;
+        e.respondWith(
+          caches.open(CACHE).then(async cache => {
+            const cached = await cache.match(e.request);
+            const fetchPromise = fetch(e.request).then(res => {
+              if(res && res.status===200) cache.put(e.request, res.clone());
+              return res;
+            }).catch(()=>cached);
+            return cached || fetchPromise;
+          })
+        );
+      });
+    `;
+    const blob = new Blob([swCode], {type:'application/javascript'});
+    navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(err => console.warn('Service worker falhou:', err));
+  });
+}
+</script>
 <style>
   :root{
     --paper:#EDEFE8;
@@ -259,6 +288,8 @@
   .stat-name{font-family:'Fraunces',serif;font-weight:600;font-size:15px;margin-bottom:6px;}
   .stat-line{font-size:12.5px;color:var(--ink-soft);margin-bottom:6px;}
   .hearts{font-size:14px;letter-spacing:1px;word-break:break-all;line-height:1.6;}
+  .hearts .gold{color:var(--mustard);}
+  .pts-total{font-size:11px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;margin-left:4px;letter-spacing:0;}
   .bar-track{
     background:var(--line);border-radius:100px;height:8px;overflow:hidden;margin-top:4px;
   }
@@ -369,6 +400,10 @@
       <div class="add-form">
         <button class="btn-ghost" id="btnResetTheme">Restaurar cores originais</button>
       </div>
+      <div class="add-form">
+        <button class="btn-ghost" id="btnResetWeekCounter">↺ Reiniciar contagem para Semana 1</button>
+      </div>
+      <p class="hint">Isso só reseta o número da semana (útil se avançou demais sem querer). Pontos, histórico e tarefas da semana atual não são apagados.</p>
     </div>
 
     <div class="subtab-panel" id="panel-cat" style="display:none;">
@@ -399,7 +434,7 @@
     </div>
   </div>
 
-  <button class="bank-toggle" id="statsToggle">📊 Estatísticas da semana</button>
+  <button class="bank-toggle" id="statsToggle">📊 Estatísticas</button>
   <div class="bank" id="statsBox"></div>
 
 
@@ -832,7 +867,8 @@ function renderDays(){
       const d = +elx.dataset.day, i = +elx.dataset.idx;
       const t = state.assignments[d][i];
       t.done = !t.done;
-      if(t.done && !t.late){
+      if(t.done){
+        if(t.late) t.late = false; // concluída: sai do estado "atrasada" na hora, não fica travada com o selo
         const id = 'h' + Date.now() + '-' + Math.random().toString(36).slice(2,7);
         state.history.push({ id, date: new Date().toISOString().slice(0,10), person: t.person, effort: t.effort, minutes: t.minutes, category: t.category, name: t.name });
         t.historyId = id;
@@ -1039,12 +1075,21 @@ function computeStats(){
 }
 
 function computeHistoryStats(filterFn){
-  const stats = [{count:0, effort:0}, {count:0, effort:0}];
+  const stats = [
+    {count:0, effort:0, penaltyCount:0, penaltyEffort:0},
+    {count:0, effort:0, penaltyCount:0, penaltyEffort:0},
+  ];
   (state.history||[]).forEach(h=>{
     if(!filterFn(h.date)) return;
     const s = stats[h.person];
     if(!s) return;
-    s.count += 1; s.effort += h.effort;
+    s.effort += h.effort;
+    if(h.penalty){
+      s.penaltyCount += 1;
+      s.penaltyEffort += Math.abs(h.effort);
+    } else {
+      s.count += 1;
+    }
   });
   return stats;
 }
@@ -1098,8 +1143,8 @@ function renderStatsContent(){
         <div class="stat-line">${s.done} de ${s.total} tarefas concluídas nesta semana</div>
         <div class="stat-line">Carga desta semana: ${s.totalEffort} pts (${pct}% do total das duas)</div>
         <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
-        <div class="stat-line" style="margin-top:8px;">Corações coletados (tarefas concluídas):</div>
-        <div class="hearts" style="color:${color}">${s.doneEffort>0 ? ('♥'.repeat(Math.min(s.doneEffort,30)) + (s.doneEffort>30?` +${s.doneEffort-30}`:'')) : '—'}</div>
+        <div class="stat-line" style="margin-top:8px;">Corações coletados (tarefas concluídas) — cada ★ vale 10 corações:</div>
+        <div class="hearts" style="color:${color}">${formatHeartsBadge(s.doneEffort)}</div>
         ${isLeader ? `<div class="stat-line" style="margin-top:8px;font-weight:600;color:${color}">👑 ${PRIZES.week}</div>` : ''}
       </div>`;
     }).join('') + `<p class="hint">Cada coração = 1 ponto de dificuldade de uma tarefa marcada como feita. Esses números são só da semana atual — zeram quando vocês clicam em "Nova semana".</p>`;
@@ -1119,18 +1164,18 @@ function renderStatsContent(){
     const s = stats[p];
     const pct = Math.round((s.effort / grandTotal) * 100);
     const color = p===0 ? 'var(--teal)' : 'var(--rose)';
-    const heartsCapped = '♥'.repeat(Math.min(s.effort, 30)) + (s.effort>30 ? ` +${s.effort-30}` : '');
     const isLeader = p===leader;
     return `
     <div class="stat-block">
       <div class="stat-name" style="color:${color}">${escapeHtml(state.people[p])}${isLeader?' <span class="crown">👑</span>':''}</div>
       <div class="stat-line">${s.count} tarefas concluídas ${periodLabel}</div>
-      <div class="stat-line">${s.effort} pts coletados (${pct}% do total das duas)</div>
+      ${s.penaltyCount>0 ? `<div class="stat-line" style="color:var(--rose);font-weight:600;">−${s.penaltyEffort} corações descontados por atraso (${s.penaltyCount} tarefa${s.penaltyCount>1?'s':''} ${periodLabel})</div>` : `<div class="stat-line">Nenhuma penalização por atraso ${periodLabel} 🎉</div>`}
+      <div class="stat-line">${s.effort} pts líquidos (${pct}% do total das duas)</div>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
-      <div class="hearts" style="color:${color}">${s.effort>0 ? heartsCapped : '—'}</div>
+      <div class="hearts" style="color:${color}">${formatHeartsBadge(s.effort)}</div>
       ${isLeader ? `<div class="stat-line" style="margin-top:8px;font-weight:600;color:${color}">👑 ${PRIZES[statsRange]}</div>` : ''}
     </div>`;
-  }).join('') + `<p class="hint">Calculado a partir do histórico de tarefas concluídas — só conta a partir de agora (marcações feitas antes dessa atualização não entram).</p>`;
+  }).join('') + `<p class="hint">Calculado a partir do histórico de tarefas concluídas — só conta a partir de agora (marcações feitas antes dessa atualização não entram). Cada ★ vale 10 corações.</p>`;
 }
 
 let taskChartInstance = null;
@@ -1186,6 +1231,18 @@ function renderTaskChart(content){
       plugins: { legend: { position: 'top' } }
     }
   });
+  requestAnimationFrame(()=>{ if(taskChartInstance) taskChartInstance.resize(); });
+}
+
+function formatHeartsBadge(total){
+  if(total<=0) return '—';
+  const golden = Math.floor(total/10);
+  const rest = total%10;
+  let icons = '';
+  if(golden>0) icons += `<span class="gold">${'★'.repeat(Math.min(golden,15))}</span>`;
+  if(golden>15) icons += ` +${golden-15}★`;
+  if(rest>0) icons += '♥'.repeat(rest);
+  return `${icons} <span class="pts-total">(+${total} pts)</span>`;
 }
 
 function escapeHtml(s){
@@ -1261,6 +1318,14 @@ document.getElementById('btnResetTheme').addEventListener('click', ()=>{
   showToast('Cores restauradas.');
 });
 
+
+document.getElementById('btnResetWeekCounter').addEventListener('click', ()=>{
+  if(!confirm('Isso volta o rótulo para "SEMANA 1" e limpa a pilha de "Semana anterior" (que ficaria com números antigos incoerentes). Os pontos, o histórico e as tarefas da semana atual continuam intactos. Confirmar?')) return;
+  state.weekCounter = 1;
+  state.weekArchive = [];
+  render(); scheduleSave();
+  showToast('Contagem de semanas reiniciada — voltamos para a Semana 1.');
+});
 
 document.getElementById('btnAddTask').addEventListener('click', ()=>{
   const nameInp = document.getElementById('newTaskName');

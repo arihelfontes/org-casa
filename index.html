@@ -722,10 +722,12 @@ function recentLoadScore(days){
   return scores;
 }
 
-function distributeWeek(isFirst, preserveDoneCounts){
+function distributeWeek(isFirst, preserveDone){
   const wc = state.weekCounter;
   const pause = state.pause || [false,false];
-  const doneCounts = preserveDoneCounts || {};
+  const preserved = preserveDone || []; // tarefas já concluídas nesta semana (dia/pessoa fixos)
+  const doneCounts = {};
+  preserved.forEach(pd=>{ doneCounts[pd.taskId] = (doneCounts[pd.taskId]||0) + 1; });
   // build instance list
   let instances = [];
   state.tasks.forEach(task=>{
@@ -751,6 +753,18 @@ function distributeWeek(isFirst, preserveDoneCounts){
   const days = [[],[],[],[],[],[],[]];
   const availablePeople = [0,1].filter(p=>!pause[p]);
   const forcedPerson = availablePeople.length===1 ? availablePeople[0] : null;
+
+  // semeia com o que já foi concluído/preservado, pra ninguém gerar uma repetição colada (dia seguinte)
+  // nem no mesmo dia de uma instância da mesma tarefa que já foi feita
+  preserved.forEach(pd=>{
+    const score = (pd.effort||0) + (pd.minutes||0)/15;
+    const penalty = isWeekend(pd.day) ? 3.5 : 0;
+    dayLoad[pd.day] += score + penalty;
+    dayTasksToday[pd.day].add(pd.taskId);
+    if(!taskDaysUsed[pd.taskId]) taskDaysUsed[pd.taskId] = new Set();
+    taskDaysUsed[pd.taskId].add(pd.day);
+    if(personLoad[pd.person]!=null) personLoad[pd.person] += score;
+  });
 
   instances.forEach((inst, idx)=>{
     const usedDays = taskDaysUsed[inst.taskId] || new Set();
@@ -1492,18 +1506,16 @@ document.getElementById('btnRedistribute').addEventListener('click', ()=>{
   // preserva tarefas atrasadas E tarefas já concluídas nesta semana antes de redistribuir o resto
   const lateTasks = [];
   const doneTasks = [];
-  const doneCounts = {};
   (state.assignments||[]).forEach((day,d)=>{
     day.forEach(t=>{
       if(t.late){
         lateTasks.push({...t});
       } else if(t.done){
         doneTasks.push({...t, day:d});
-        doneCounts[t.taskId] = (doneCounts[t.taskId]||0) + 1;
       }
     });
   });
-  distributeWeek(false, doneCounts);
+  distributeWeek(false, doneTasks);
   lateTasks.forEach(placeLateTask);
   doneTasks.forEach(item=>{
     const day = item.day;
@@ -1512,7 +1524,7 @@ document.getElementById('btnRedistribute').addEventListener('click', ()=>{
     state.assignments[day].push(item);
   });
   renderDays(); renderStats(); scheduleSave();
-  showToast('Semana redistribuída — o que já estava concluído continua com a mesma pessoa.');
+  showToast('Semana redistribuída — concluídas ficam como estavam, e as repetições restantes evitam cair no dia seguinte.');
 });
 
 const WEEK_ARCHIVE_LIMIT = 15;

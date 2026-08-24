@@ -214,6 +214,14 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
     padding:4px 8px;border-radius:100px;cursor:pointer;flex:none;
     border:1px solid transparent;white-space:nowrap;
   }
+  .person-col{display:flex;flex-direction:column;align-items:center;gap:3px;flex:none;}
+  .help-btn{
+    font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;
+    padding:2px 7px;border-radius:100px;cursor:pointer;flex:none;white-space:nowrap;
+    border:1px dashed var(--line);background:none;color:var(--ink-soft);opacity:0.75;
+  }
+  .help-btn:hover{opacity:1;}
+  .help-btn.on{border-style:solid;background:var(--mustard-soft);color:var(--mustard);border-color:var(--mustard);opacity:1;}
   .chip0{background:var(--teal-soft);color:var(--teal);}
   .chip1{background:var(--rose-soft);color:var(--rose);}
   .skip-btn{
@@ -493,6 +501,7 @@ let state = {
   history: [], // {id, date:'YYYY-MM-DD', person, effort, minutes, category, name, batchId?, penalty?} — pode ser negativo (penalidade)
   weekArchive: [], // pilha de snapshots para "Voltar semana" (multi-nível)
   pause: [false, false], // modo férias/pausa por pessoa
+  helpCount: [0, 0], // quantas vezes cada pessoa clicou "Ajuda?" em tarefa da outra pessoa
 };
 
 function hexToRgb(hex){
@@ -601,6 +610,7 @@ function migrateState(){
   }
   if(!Array.isArray(state.history)) state.history = [];
   if(!Array.isArray(state.pause)) state.pause = [false, false];
+  if(!Array.isArray(state.helpCount)) state.helpCount = [0, 0];
   if(!Array.isArray(state.weekArchive)){
     // migra o snapshot único antigo (se existir) para a nova pilha multi-nível
     state.weekArchive = state.previousWeekSnapshot ? [state.previousWeekSnapshot] : [];
@@ -622,6 +632,10 @@ function migrateState(){
 function startPolling(){
   if(pollHandle) clearInterval(pollHandle);
   pollHandle = setInterval(async ()=>{
+    // não atualiza a tela enquanto a pessoa está digitando/selecionando algo,
+    // senão o campo perde o foco e o teclado fecha sozinho no celular
+    const activeTag = document.activeElement && document.activeElement.tagName;
+    if(activeTag==='INPUT' || activeTag==='TEXTAREA' || activeTag==='SELECT') return;
     try{
       const res = await fetch(FIREBASE_DB_URL + DB_PATH);
       const data = await res.json();
@@ -657,16 +671,19 @@ function recentLoadScore(days){
   return scores;
 }
 
-function distributeWeek(isFirst){
+function distributeWeek(isFirst, preserveDoneCounts){
   const wc = state.weekCounter;
   const pause = state.pause || [false,false];
+  const doneCounts = preserveDoneCounts || {};
   // build instance list
   let instances = [];
   state.tasks.forEach(task=>{
     const f = freqMap[task.freq] || freqMap["1x"];
     const active = (wc % f.everyN === 0) || f.everyN===1;
     if(!active) return;
-    for(let i=0;i<f.per;i++){
+    const already = doneCounts[task.id] || 0; // já concluídas nesta semana: não gera de novo
+    const toGenerate = Math.max(0, f.per - already);
+    for(let i=0;i<toGenerate;i++){
       instances.push({taskId:task.id, name:task.name, effort:task.effort, category:task.category||'geral', minutes:task.minutes||15, allowedDays:task.allowedDays||[]});
     }
   });
@@ -824,7 +841,10 @@ function renderDays(){
             <div class="task-name ${t.done?'done':''}">${t.late?`<span class="late-badge">${(t.lateStreak||0)>=3?'🚨 TRAVADA':'ATRASADA'}</span> `:''}${escapeHtml(t.name)}</div>
             <div class="task-sub"><span class="dots">${dotsHtml}</span> <span class="mins-badge">· ${t.minutes||0}min</span></div>
           </div>
-          <div class="person-chip chip${t.person}" data-day="${d}" data-idx="${ti}" data-act="person">${escapeHtml(state.people[t.person])}</div>
+          <div class="person-col">
+            <div class="person-chip chip${t.person}" data-day="${d}" data-idx="${ti}" data-act="person">${escapeHtml(state.people[t.person])}</div>
+            <button class="help-btn ${t.helpedBy!=null?'on':''}" data-day="${d}" data-idx="${ti}" data-act="help" title="Marcar que ${escapeHtml(state.people[t.person===0?1:0])} ajudou nessa tarefa">${t.helpedBy!=null ? '🤝 '+escapeHtml(state.people[t.helpedBy]) : '🤝 Ajuda?'}</button>
+          </div>
           <button class="skip-btn" data-day="${d}" data-idx="${ti}" data-act="skip" title="Pular essa">✕</button>
         </div>`;
       }).join('');
@@ -885,6 +905,34 @@ function renderDays(){
     elx.addEventListener('click', ()=>{
       const d = +elx.dataset.day, i = +elx.dataset.idx;
       state.assignments[d][i].person = state.assignments[d][i].person===0?1:0;
+      renderDays(); renderStats(); scheduleSave();
+    });
+  });
+  el.querySelectorAll('[data-act="help"]').forEach(elx=>{
+    elx.addEventListener('click', ()=>{
+      const d = +elx.dataset.day, i = +elx.dataset.idx;
+      const t = state.assignments[d][i];
+      const helper = t.person===0 ? 1 : 0; // a outra pessoa é quem está ajudando
+      if(!Array.isArray(state.helpCount)) state.helpCount = [0,0];
+      if(t.helpedBy!=null){
+        // desmarcar ajuda (foi engano)
+        t.helpedBy = null;
+        state.helpCount[helper] = Math.max(0, state.helpCount[helper]-1);
+      } else {
+        t.helpedBy = helper;
+        state.helpCount[helper] = (state.helpCount[helper]||0) + 1;
+        if(state.helpCount[helper] % 3 === 0){
+          state.history.push({
+            id: 'h' + Date.now() + '-' + Math.random().toString(36).slice(2,7),
+            date: new Date().toISOString().slice(0,10),
+            person: helper, effort: 1, minutes: 0, category: t.category, name: 'Bônus por ajudar 3x',
+            bonus: true
+          });
+          showToast(`🤝 ${escapeHtml(state.people[helper])} ajudou 3 vezes — ganhou +1 coração de bônus!`);
+        } else {
+          showToast(`${escapeHtml(state.people[helper])} ajudou nessa tarefa.`);
+        }
+      }
       renderDays(); renderStats(); scheduleSave();
     });
   });
@@ -1078,8 +1126,8 @@ function computeStats(){
 
 function computeHistoryStats(filterFn){
   const stats = [
-    {count:0, effort:0, penaltyCount:0, penaltyEffort:0},
-    {count:0, effort:0, penaltyCount:0, penaltyEffort:0},
+    {count:0, effort:0, penaltyCount:0, penaltyEffort:0, bonusCount:0, bonusEffort:0},
+    {count:0, effort:0, penaltyCount:0, penaltyEffort:0, bonusCount:0, bonusEffort:0},
   ];
   (state.history||[]).forEach(h=>{
     if(!filterFn(h.date)) return;
@@ -1089,6 +1137,9 @@ function computeHistoryStats(filterFn){
     if(h.penalty){
       s.penaltyCount += 1;
       s.penaltyEffort += Math.abs(h.effort);
+    } else if(h.bonus){
+      s.bonusCount += 1;
+      s.bonusEffort += h.effort;
     } else {
       s.count += 1;
     }
@@ -1172,6 +1223,7 @@ function renderStatsContent(){
       <div class="stat-name" style="color:${color}">${escapeHtml(state.people[p])}${isLeader?' <span class="crown">👑</span>':''}</div>
       <div class="stat-line">${s.count} tarefas concluídas ${periodLabel}</div>
       ${s.penaltyCount>0 ? `<div class="stat-line" style="color:var(--rose);font-weight:600;">−${s.penaltyEffort} corações descontados por atraso (${s.penaltyCount} tarefa${s.penaltyCount>1?'s':''} ${periodLabel})</div>` : `<div class="stat-line">Nenhuma penalização por atraso ${periodLabel} 🎉</div>`}
+      ${s.bonusCount>0 ? `<div class="stat-line" style="color:var(--mustard);font-weight:600;">+${s.bonusEffort} coração${s.bonusEffort>1?'ões':''} de bônus por ajudar (${s.bonusCount}x) 🤝</div>` : ''}
       <div class="stat-line">${s.effort} pts líquidos (${pct}% do total das duas)</div>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
       <div class="hearts" style="color:${color}">${formatHeartsBadge(s.effort)}</div>
@@ -1367,15 +1419,30 @@ function placeLateTask(lt){
 }
 
 document.getElementById('btnRedistribute').addEventListener('click', ()=>{
-  // preserva tarefas atrasadas (não regeneradas pelo banco) antes de redistribuir as da semana
+  // preserva tarefas atrasadas E tarefas já concluídas nesta semana antes de redistribuir o resto
   const lateTasks = [];
-  (state.assignments||[]).forEach(day=>{
-    day.forEach(t=>{ if(t.late) lateTasks.push({...t}); });
+  const doneTasks = [];
+  const doneCounts = {};
+  (state.assignments||[]).forEach((day,d)=>{
+    day.forEach(t=>{
+      if(t.late){
+        lateTasks.push({...t});
+      } else if(t.done){
+        doneTasks.push({...t, day:d});
+        doneCounts[t.taskId] = (doneCounts[t.taskId]||0) + 1;
+      }
+    });
   });
-  distributeWeek();
+  distributeWeek(false, doneCounts);
   lateTasks.forEach(placeLateTask);
+  doneTasks.forEach(item=>{
+    const day = item.day;
+    delete item.day;
+    if(!state.assignments[day]) state.assignments[day] = [];
+    state.assignments[day].push(item);
+  });
   renderDays(); renderStats(); scheduleSave();
-  showToast('Semana redistribuída.');
+  showToast('Semana redistribuída — o que já estava concluído continua com a mesma pessoa.');
 });
 
 const WEEK_ARCHIVE_LIMIT = 15;

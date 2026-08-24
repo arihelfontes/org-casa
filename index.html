@@ -155,6 +155,49 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
     box-shadow:var(--shadow);
   }
   .day.weekend{ background: linear-gradient(180deg, var(--paper-card), #F3F0E9); }
+
+  /* seletor de estilo dos cartões */
+  .style-picker{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0;}
+  .style-opt{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;padding:6px 2px;border-radius:10px;border:1.5px solid transparent;}
+  .style-opt.on{border-color:var(--teal);background:var(--teal-soft);}
+  .style-opt span{font-size:10.5px;color:var(--ink-soft);text-align:center;}
+  .style-swatch{width:100%;height:34px;border-radius:5px;background:var(--paper-card);border:1px solid var(--line);}
+  .swatch-notebook{background:repeating-linear-gradient(var(--paper-card) 0px,var(--paper-card) 7px,#DCE6E0 8px);border-left:2px solid #D8898F;}
+  .swatch-sticky{background:var(--mustard-soft);border-radius:2px;transform:rotate(-2deg);}
+  .swatch-torn{background:#F1E9D8;clip-path:polygon(0% 0%,100% 0%,100% 78%,88% 100%,76% 78%,64% 100%,52% 78%,40% 100%,28% 78%,16% 100%,4% 78%,0% 100%);}
+
+  /* estilo: bloco de notas */
+  #days.style-notebook .day{border-radius:4px;position:relative;}
+  #days.style-notebook .day-body{
+    padding-left:18px;position:relative;
+    background-image:repeating-linear-gradient(var(--paper-card) 0px, var(--paper-card) 23px, var(--line) 24px);
+  }
+  #days.style-notebook .day-body::before{
+    content:'';position:absolute;left:10px;top:0;bottom:0;width:1.5px;background:#D8898F;opacity:0.55;
+  }
+  #days.style-notebook .task-card{background:transparent;}
+
+  /* estilo: post-it */
+  #days.style-sticky .day{
+    border-radius:3px;border:none;background:var(--mustard-soft);
+    box-shadow:2px 4px 10px rgba(0,0,0,0.12);position:relative;overflow:visible;
+  }
+  #days.style-sticky .day:nth-child(odd){transform:rotate(-0.8deg);}
+  #days.style-sticky .day:nth-child(even){transform:rotate(0.8deg);}
+  #days.style-sticky .day::after{
+    content:'';position:absolute;top:0;right:0;width:0;height:0;
+    border-style:solid;border-width:0 16px 16px 0;
+    border-color:transparent rgba(0,0,0,0.1) transparent transparent;
+  }
+  #days.style-sticky .day-head{border-bottom:1px solid rgba(35,50,41,0.12);}
+
+  /* estilo: papel rasgado */
+  #days.style-torn .day{
+    border-radius:3px 3px 0 0;border:none;background:#F1E9D8;
+    box-shadow:0 2px 6px rgba(0,0,0,0.1);
+    clip-path:polygon(0% 0%,100% 0%,100% 96%,95% 100%,90% 96%,85% 100%,80% 96%,75% 100%,70% 96%,65% 100%,60% 96%,55% 100%,50% 96%,45% 100%,40% 96%,35% 100%,30% 96%,25% 100%,20% 96%,15% 100%,10% 96%,5% 100%,0% 96%);
+    padding-bottom:10px;
+  }
   .day-head{
     display:flex;align-items:baseline;justify-content:space-between;
     padding:12px 16px 8px;
@@ -409,6 +452,12 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
       <div class="add-form">
         <button class="btn-ghost" id="btnResetTheme">Restaurar cores originais</button>
       </div>
+      <div class="style-picker" id="cardStylePicker">
+        <div class="style-opt" data-style="default"><div class="style-swatch swatch-default"></div><span>Padrão</span></div>
+        <div class="style-opt" data-style="notebook"><div class="style-swatch swatch-notebook"></div><span>Bloco de notas</span></div>
+        <div class="style-opt" data-style="sticky"><div class="style-swatch swatch-sticky"></div><span>Post-it</span></div>
+        <div class="style-opt" data-style="torn"><div class="style-swatch swatch-torn"></div><span>Papel rasgado</span></div>
+      </div>
       <div class="add-form">
         <button class="btn-ghost" id="btnResetWeekCounter">↺ Reiniciar contagem para Semana 1</button>
         <button class="btn-ghost" id="btnResetScores">🗑️ Zerar corações, tarefas concluídas e atrasadas</button>
@@ -502,6 +551,7 @@ let state = {
   weekArchive: [], // pilha de snapshots para "Voltar semana" (multi-nível)
   pause: [false, false], // modo férias/pausa por pessoa
   helpCount: [0, 0], // quantas vezes cada pessoa clicou "Ajuda?" em tarefa da outra pessoa
+  cardStyle: 'default', // 'default' | 'notebook' | 'sticky' | 'torn'
 };
 
 function hexToRgb(hex){
@@ -611,6 +661,7 @@ function migrateState(){
   if(!Array.isArray(state.history)) state.history = [];
   if(!Array.isArray(state.pause)) state.pause = [false, false];
   if(!Array.isArray(state.helpCount)) state.helpCount = [0, 0];
+  if(!state.cardStyle) state.cardStyle = 'default';
   if(!Array.isArray(state.weekArchive)){
     // migra o snapshot único antigo (se existir) para a nova pilha multi-nível
     state.weekArchive = state.previousWeekSnapshot ? [state.previousWeekSnapshot] : [];
@@ -788,6 +839,7 @@ function updatePauseUI(){
 
 function render(){
   applyTheme();
+  applyCardStyle();
   document.getElementById('name0').value = state.people[0];
   document.getElementById('name1').value = state.people[1];
   document.getElementById('weekLabel').textContent = 'SEMANA ' + state.weekCounter;
@@ -803,6 +855,16 @@ function render(){
   renderBank();
   renderCategories();
   renderStats();
+}
+
+function applyCardStyle(){
+  const el = document.getElementById('days');
+  const style = state.cardStyle || 'default';
+  el.classList.remove('style-notebook','style-sticky','style-torn');
+  if(style!=='default') el.classList.add('style-'+style);
+  document.querySelectorAll('#cardStylePicker .style-opt').forEach(opt=>{
+    opt.classList.toggle('on', opt.dataset.style===style);
+  });
 }
 
 function renderDays(){
@@ -1370,6 +1432,14 @@ document.getElementById('btnResetTheme').addEventListener('click', ()=>{
   state.theme = { paper: "#EDEFE8", person0: "#3F7D6E", person1: "#B15C68" };
   applyTheme(); syncThemeInputs(); scheduleSave();
   showToast('Cores restauradas.');
+});
+
+document.querySelectorAll('#cardStylePicker .style-opt').forEach(opt=>{
+  opt.addEventListener('click', ()=>{
+    state.cardStyle = opt.dataset.style;
+    applyCardStyle();
+    scheduleSave();
+  });
 });
 
 

@@ -25,11 +25,22 @@
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', () => {
     const swCode = `
-      const CACHE = 'mutirao-casa-v1';
+      const CACHE = 'mutirao-casa-v2';
       self.addEventListener('install', e => { self.skipWaiting(); });
-      self.addEventListener('activate', e => { self.clients.claim(); });
+      self.addEventListener('activate', e => {
+        e.waitUntil(
+          caches.keys().then(names => Promise.all(
+            names.filter(n => n !== CACHE).map(n => caches.delete(n))
+          ))
+        );
+        self.clients.claim();
+      });
       self.addEventListener('fetch', e => {
         if(e.request.method !== 'GET') return;
+        // só guarda em cache os arquivos do próprio site (app shell).
+        // chamadas pra fora (clima, Firebase, CDN) sempre vão direto pra rede,
+        // sem cache — senão dado como previsão do tempo fica "preso" no passado.
+        if(new URL(e.request.url).origin !== self.location.origin) return;
         e.respondWith(
           caches.open(CACHE).then(async cache => {
             const cached = await cache.match(e.request);
@@ -222,7 +233,8 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
   .day-meta-persons{display:block;margin-top:2px;}
   .weather-badge{
     font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);
-    margin-right:6px;white-space:nowrap;
+    margin-right:6px;white-space:nowrap;cursor:pointer;
+    border-bottom:1px dotted var(--line);
   }
   .task-card.late{
     background:rgba(201,138,46,0.10);
@@ -583,12 +595,15 @@ function weatherEmoji(code){
   if([95,96,99].includes(code)) return '⛈️';
   return '🌥️';
 }
+let weatherFailedOnce = false;
 async function fetchWeather(){
   try{
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${WEATHER_LAT}&longitude=${WEATHER_LON}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=America%2FSao_Paulo&forecast_days=10`;
     const res = await fetch(url);
+    if(!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    if(!data || !data.daily) return;
+    console.log('previsão do tempo recebida:', data);
+    if(!data || !data.daily || !data.daily.time) throw new Error('resposta sem dados diários');
     const map = {};
     data.daily.time.forEach((dateStr, i)=>{
       map[dateStr] = {
@@ -601,6 +616,10 @@ async function fetchWeather(){
     renderDays(); // reinjeta os badges de clima nos cards já renderizados
   }catch(e){
     console.warn('previsão do tempo indisponível:', e);
+    if(!weatherFailedOnce){
+      weatherFailedOnce = true;
+      showToast('⚠ Não consegui buscar a previsão do tempo agora.');
+    }
   }
 }
 
@@ -982,7 +1001,9 @@ function renderDays(){
     const dateObj = new Date(monday); dateObj.setDate(monday.getDate()+d);
     const dateStr = dateObj.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
     const w = weatherData[localISODate(dateObj)];
-    const weatherHtml = w ? `<span class="weather-badge" title="Máx ${Math.round(w.tmax)}° · Mín ${Math.round(w.tmin)}°">${weatherEmoji(w.code)} ${Math.round((w.tmax+w.tmin)/2)}°</span>` : '';
+    const wCompact = w ? `${weatherEmoji(w.code)} ${Math.round((w.tmax+w.tmin)/2)}°` : '';
+    const wDetail = w ? `${weatherEmoji(w.code)} ${Math.round(w.tmin)}°–${Math.round(w.tmax)}°` : '';
+    const weatherHtml = w ? `<span class="weather-badge" data-act="weather" data-compact="${escapeHtml(wCompact)}" data-detail="${escapeHtml(wDetail)}" title="Toque para ver máx/mín">${wCompact}</span>` : '';
     const dayDiv = document.createElement('div');
     dayDiv.className = 'day' + (isWeekend(d) ? ' weekend' : '');
     dayDiv.dataset.dayIndex = d;
@@ -1025,7 +1046,7 @@ function renderDays(){
     dayDiv.innerHTML = `
       <div class="day-head">
         <span class="day-name">${name} <button class="quickadd-btn" data-day="${d}" title="Adicionar tarefa só neste dia">+</button></span>
-        <span class="day-meta">${weatherHtml}${dateStr} · ${totalEffort>0? '♥'.repeat(totalEffort) : '—'}<span class="day-meta-persons">${timeLine}</span></span>
+        <span class="day-meta">${weatherHtml}${weatherHtml ? ' · ' : ''}${dateStr} · ${totalEffort>0? '♥'.repeat(totalEffort) : '—'}<span class="day-meta-persons">${timeLine}</span></span>
       </div>
       <div class="quickadd-form" id="quickadd-${d}" style="display:none;">
         <input type="text" class="qa-name" placeholder="Nome da tarefa (ex: limpei o banheiro)" />
@@ -1143,6 +1164,14 @@ function renderDays(){
       });
       renderDays(); renderStats(); scheduleSave();
       showToast('Tarefa adicionada só nesse dia.');
+    });
+  });
+
+  el.querySelectorAll('[data-act="weather"]').forEach(elx=>{
+    elx.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const showingDetail = elx.classList.toggle('detail');
+      elx.textContent = showingDetail ? elx.dataset.detail : elx.dataset.compact;
     });
   });
 

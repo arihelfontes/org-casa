@@ -94,10 +94,21 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
   }
 
   .people-row{
-    display:flex;gap:10px;margin-top:18px;position:relative;z-index:1;
+    display:flex;gap:10px;margin-top:18px;position:relative;z-index:1;flex-wrap:wrap;
   }
+  .add-person-btn{
+    margin-top:8px;background:none;border:1px dashed var(--line);color:var(--ink-soft);
+    padding:7px 12px;border-radius:100px;font-size:12px;font-weight:600;
+  }
+  .remove-person-btn{
+    background:none;border:none;color:var(--ink-soft);opacity:0.4;font-size:12px;
+    padding:0 2px;flex:none;
+  }
+  .remove-person-btn:hover{opacity:1;color:#A24747;}
   .person-pin{
     flex:1;
+    min-width:150px;
+    display:flex;align-items:center;gap:2px;
     background:var(--paper-card);
     border:1px solid var(--line);
     border-radius:14px;
@@ -105,16 +116,14 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
     box-shadow:var(--shadow);
   }
   .person-pin .dot{
-    width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px;
+    width:9px;height:9px;border-radius:50%;flex:none;margin-right:4px;
   }
   .person-pin input{
-    width:100%;border:none;background:transparent;font-family:'Fraunces',serif;
+    flex:1;min-width:0;border:none;background:transparent;font-family:'Fraunces',serif;
     font-weight:600;font-size:15px;color:var(--ink);padding:2px 0;
   }
   .person-pin input:focus{outline:none;border-bottom:1px solid var(--ink-soft);}
-  .p0 .dot{background:var(--teal);}
-  .p1 .dot{background:var(--rose);}
-  .crown{margin-left:5px;font-size:13px;}
+  .crown{margin-left:5px;font-size:13px;flex:none;}
   .pause-btn{
     background:none;border:none;font-size:13px;padding:2px 4px;margin-left:2px;
     opacity:0.35;filter:grayscale(1);flex:none;
@@ -164,7 +173,7 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
   .style-swatch{width:100%;height:34px;border-radius:5px;background:var(--paper-card);border:1px solid var(--line);}
   .swatch-notebook{background:repeating-linear-gradient(var(--paper-card) 0px,var(--paper-card) 7px,#DCE6E0 8px);border-left:2px solid #D8898F;}
   .swatch-sticky{background:var(--mustard-soft);border-radius:2px;transform:rotate(-2deg);}
-  .swatch-torn{background:#F1E9D8;clip-path:polygon(0% 0%,100% 0%,100% 78%,88% 100%,76% 78%,64% 100%,52% 78%,40% 100%,28% 78%,16% 100%,4% 78%,0% 100%);}
+  .swatch-torn{background:#FFFFFF;clip-path:polygon(0% 0%,100% 0%,100% 78%,88% 100%,76% 78%,64% 100%,52% 78%,40% 100%,28% 78%,16% 100%,4% 78%,0% 100%);}
 
   /* estilo: bloco de notas */
   #days.style-notebook .day{border-radius:4px;position:relative;}
@@ -193,7 +202,7 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
 
   /* estilo: papel rasgado */
   #days.style-torn .day{
-    border-radius:3px 3px 0 0;border:none;background:#F1E9D8;
+    border-radius:3px 3px 0 0;border:none;background:#FFFFFF;
     box-shadow:0 2px 6px rgba(0,0,0,0.1);
     clip-path:polygon(0% 0%,100% 0%,100% 96%,95% 100%,90% 96%,85% 100%,80% 96%,75% 100%,70% 96%,65% 100%,60% 96%,55% 100%,50% 96%,45% 100%,40% 96%,35% 100%,30% 96%,25% 100%,20% 96%,15% 100%,10% 96%,5% 100%,0% 96%);
     padding-bottom:10px;
@@ -265,8 +274,6 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
   }
   .help-btn:hover{opacity:1;}
   .help-btn.on{border-style:solid;background:var(--mustard-soft);color:var(--mustard);border-color:var(--mustard);opacity:1;}
-  .chip0{background:var(--teal-soft);color:var(--teal);}
-  .chip1{background:var(--rose-soft);color:var(--rose);}
   .skip-btn{
     background:none;border:none;color:var(--ink-soft);font-size:15px;
     padding:2px 4px;cursor:pointer;flex:none;opacity:0.5;
@@ -370,8 +377,14 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
     padding:9px 8px;border-radius:10px;border:1px solid var(--line);font-size:12px;
     font-family:'Inter',sans-serif;color:var(--ink-soft);background:#fff;
   }
-  .cat-dot{
-    width:10px;height:10px;border-radius:3px;flex:none;margin-right:2px;
+  .cat-highlight{
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    background-position: center;
+    padding: 0 7px;
+    margin: 0 -3px;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
   }
   .cat-chip{
     font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:600;
@@ -409,10 +422,8 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
     <div class="line"></div>
     <h1>Mutirão da Casa</h1>
     <p class="subtitle">Tarefas espalhadas pela semana — sem sobrecarregar o fim de semana.</p>
-    <div class="people-row">
-      <div class="person-pin p0"><span class="dot"></span><input id="name0" maxlength="16" /><span class="crown" id="crown0"></span><button class="pause-btn" id="pauseBtn0" title="Marcar pausa/férias">🌴</button></div>
-      <div class="person-pin p1"><span class="dot"></span><input id="name1" maxlength="16" /><span class="crown" id="crown1"></span><button class="pause-btn" id="pauseBtn1" title="Marcar pausa/férias">🌴</button></div>
-    </div>
+    <div class="people-row" id="peopleRow"></div>
+    <button class="add-person-btn" id="addPersonBtn" title="Adicionar outra pessoa">+ pessoa</button>
     <div id="autosaveWarning" style="display:none;margin-top:12px;background:var(--rose-soft);color:var(--rose);border-radius:12px;padding:10px 12px;font-size:12px;font-weight:500;">
       ⚠ Não consegui sincronizar agora — verifique sua conexão com a internet.
     </div>
@@ -442,13 +453,8 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
         <label style="font-size:12.5px;color:var(--ink-soft);flex:1;">Fundo do site
           <input type="color" id="colorPaper" style="width:100%;height:34px;border:1px solid var(--line);border-radius:8px;background:none;padding:2px;" />
         </label>
-        <label style="font-size:12.5px;color:var(--ink-soft);flex:1;">Cor de <span id="colorLabel0"></span>
-          <input type="color" id="colorPerson0" style="width:100%;height:34px;border:1px solid var(--line);border-radius:8px;background:none;padding:2px;" />
-        </label>
-        <label style="font-size:12.5px;color:var(--ink-soft);flex:1;">Cor de <span id="colorLabel1"></span>
-          <input type="color" id="colorPerson1" style="width:100%;height:34px;border:1px solid var(--line);border-radius:8px;background:none;padding:2px;" />
-        </label>
       </div>
+      <div class="add-form" id="personColorRow" style="flex-wrap:wrap;"></div>
       <div class="add-form">
         <button class="btn-ghost" id="btnResetTheme">Restaurar cores originais</button>
       </div>
@@ -546,13 +552,19 @@ let state = {
   weekCounter: 1,
   weekKey: null,
   assignments: null, // {0:[{taskId,name,effort,person,done,category,minutes}], ...}
-  theme: { paper: "#EDEFE8", ink: "#233229", person0: "#3F7D6E", person1: "#B15C68" },
+  theme: { paper: "#EDEFE8", ink: "#233229", personColors: ["#3F7D6E", "#B15C68"] },
   history: [], // {id, date:'YYYY-MM-DD', person, effort, minutes, category, name, batchId?, penalty?} — pode ser negativo (penalidade)
   weekArchive: [], // pilha de snapshots para "Voltar semana" (multi-nível)
-  pause: [false, false], // modo férias/pausa por pessoa
-  helpCount: [0, 0], // quantas vezes cada pessoa clicou "Ajuda?" em tarefa da outra pessoa
+  pause: [false, false], // modo férias/pausa por pessoa (array de tamanho == número de pessoas)
+  helpCount: [0, 0], // quantas vezes cada pessoa foi marcada como "ajudante" numa tarefa alheia
   cardStyle: 'default', // 'default' | 'notebook' | 'sticky' | 'torn'
 };
+
+const DEFAULT_PERSON_PALETTE = ["#3F7D6E","#B15C68","#C98A2E","#6B4C9A","#4C7EA8","#8FA24E","#A2585E","#7A6FA0"];
+function personColor(i){
+  const custom = state.theme && state.theme.personColors && state.theme.personColors[i];
+  return custom || DEFAULT_PERSON_PALETTE[i % DEFAULT_PERSON_PALETTE.length];
+}
 
 function hexToRgb(hex){
   hex = hex.replace('#','');
@@ -576,15 +588,24 @@ function applyTheme(){
   const root = document.documentElement.style;
   const paper = t.paper || "#EDEFE8";
   const ink = t.ink || "#233229";
-  const p0 = t.person0 || "#3F7D6E";
-  const p1 = t.person1 || "#B15C68";
   root.setProperty('--paper', paper);
   root.setProperty('--ink', ink);
   root.setProperty('--ink-soft', mixHex(ink, '#ffffff', 0.38));
-  root.setProperty('--teal', p0);
-  root.setProperty('--teal-soft', mixHex(p0, '#ffffff', 0.82));
-  root.setProperty('--rose', p1);
-  root.setProperty('--rose-soft', mixHex(p1, '#ffffff', 0.82));
+  (state.people||[]).forEach((_, i)=>{
+    const c = personColor(i);
+    root.setProperty(`--person${i}`, c);
+    root.setProperty(`--person${i}-soft`, mixHex(c, '#ffffff', 0.82));
+  });
+  // aliases usados em acentos genéricos (checkbox marcado, botão excluir, seletor de estilo)
+  root.setProperty('--teal', personColor(0));
+  root.setProperty('--teal-soft', mixHex(personColor(0), '#ffffff', 0.82));
+  root.setProperty('--rose', personColor(1));
+  root.setProperty('--rose-soft', mixHex(personColor(1), '#ffffff', 0.82));
+}
+function highlighterBg(hex){
+  // pincelada com bordas onduladas, tipo marca-texto real
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 46" preserveAspectRatio="none"><path d="M3,16 Q10,4 28,9 T72,5 T125,10 T172,6 T216,12 L217,33 Q205,42 178,36 T128,39 T80,34 T38,38 T3,29 Z" fill="${hex}" fill-opacity="0.5"/></svg>`;
+  return `url('data:image/svg+xml,${encodeURIComponent(svg)}')`;
 }
 function catById(id){
   return (state.categories||[]).find(c=>c.id===id) || {id:'geral', name:'Geral', color:'#8A8A7C'};
@@ -659,14 +680,28 @@ function migrateState(){
     state.categories = DEFAULT_CATEGORIES.map(c=>({...c}));
   }
   if(!Array.isArray(state.history)) state.history = [];
-  if(!Array.isArray(state.pause)) state.pause = [false, false];
-  if(!Array.isArray(state.helpCount)) state.helpCount = [0, 0];
   if(!state.cardStyle) state.cardStyle = 'default';
   if(!Array.isArray(state.weekArchive)){
     // migra o snapshot único antigo (se existir) para a nova pilha multi-nível
     state.weekArchive = state.previousWeekSnapshot ? [state.previousWeekSnapshot] : [];
   }
   delete state.previousWeekSnapshot;
+
+  // migra theme.person0/person1 (formato antigo) para theme.personColors (array, N pessoas)
+  if(!state.theme) state.theme = { paper:"#EDEFE8", ink:"#233229" };
+  if(!Array.isArray(state.theme.personColors)){
+    state.theme.personColors = [state.theme.person0 || "#3F7D6E", state.theme.person1 || "#B15C68"];
+  }
+  delete state.theme.person0;
+  delete state.theme.person1;
+
+  const n = (state.people||[]).length;
+  if(!Array.isArray(state.pause)) state.pause = [];
+  while(state.pause.length < n) state.pause.push(false);
+  if(!Array.isArray(state.helpCount)) state.helpCount = [];
+  while(state.helpCount.length < n) state.helpCount.push(0);
+  while(state.theme.personColors.length < n) state.theme.personColors.push(DEFAULT_PERSON_PALETTE[state.theme.personColors.length % DEFAULT_PERSON_PALETTE.length]);
+
   (state.tasks||[]).forEach(t=>{
     if(!t.category) t.category = 'geral';
     if(t.minutes==null) t.minutes = 15;
@@ -710,7 +745,7 @@ function isWeekend(dayIdx){ return dayIdx===5 || dayIdx===6; }
 
 function recentLoadScore(days){
   days = days || 28;
-  const scores = [0,0];
+  const scores = state.people.map(()=>0);
   const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-days);
   const cutoffStr = cutoff.toISOString().slice(0,10);
   (state.history||[]).forEach(h=>{
@@ -749,9 +784,9 @@ function distributeWeek(isFirst, preserveDone){
   const taskDaysUsed = {}; // taskId -> Set of day indices already used this week
   // viés de justiça de longo prazo: quem trabalhou mais nos últimos 28 dias começa "mais carregado"
   const recent = recentLoadScore(28);
-  const personLoad = [recent[0]*0.4, recent[1]*0.4];
+  const personLoad = recent.map(r=>r*0.4);
   const days = [[],[],[],[],[],[],[]];
-  const availablePeople = [0,1].filter(p=>!pause[p]);
+  const availablePeople = state.people.map((_,i)=>i).filter(i=>!pause[i]);
   const forcedPerson = availablePeople.length===1 ? availablePeople[0] : null;
 
   // semeia com o que já foi concluído/preservado, pra ninguém gerar uma repetição colada (dia seguinte)
@@ -811,7 +846,13 @@ function distributeWeek(isFirst, preserveDone){
     usedDays.add(bestDay);
     taskDaysUsed[inst.taskId] = usedDays;
     // pessoa com menos carga acumulada (peso + tempo) fica com a tarefa — respeitando pausa
-    const person = forcedPerson!=null ? forcedPerson : (personLoad[0] <= personLoad[1] ? 0 : 1);
+    let person;
+    if(forcedPerson!=null){
+      person = forcedPerson;
+    } else {
+      const pool = availablePeople.length ? availablePeople : state.people.map((_,i)=>i);
+      person = pool.reduce((best,p)=> personLoad[p] < personLoad[best] ? p : best, pool[0]);
+    }
     personLoad[person] += score;
     days[bestDay].push({
       taskId: inst.taskId, name: inst.name, effort: inst.effort,
@@ -824,41 +865,96 @@ function distributeWeek(isFirst, preserveDone){
 }
 
 function computeLifetimeHearts(){
-  const totals = [0,0];
+  const totals = state.people.map(()=>0);
   (state.history||[]).forEach(h=>{
     if(totals[h.person]!=null) totals[h.person] += h.effort;
   });
   return totals;
 }
-function updateCrowns(){
-  const c0 = document.getElementById('crown0');
-  const c1 = document.getElementById('crown1');
-  if(!c0 || !c1) return;
-  c0.textContent = ''; c1.textContent = '';
+function renderPeople(){
+  const row = document.getElementById('peopleRow');
+  if(!row) return;
   const totals = computeLifetimeHearts();
-  if(totals[0] === totals[1]) return;
-  if(totals[0] > totals[1]) c0.textContent = '👑'; else c1.textContent = '👑';
-}
-function updatePauseUI(){
-  const pause = state.pause || [false,false];
-  [0,1].forEach(p=>{
-    const btn = document.getElementById('pauseBtn'+p);
-    const pin = btn ? btn.closest('.person-pin') : null;
-    if(!btn || !pin) return;
-    btn.classList.toggle('on', !!pause[p]);
-    pin.classList.toggle('paused', !!pause[p]);
-    btn.title = pause[p] ? (state.people[p]+' está de pausa — clique para voltar') : 'Marcar pausa/férias';
+  const maxTotal = Math.max(...totals);
+  const tie = totals.filter(t=>t===maxTotal).length > 1;
+  const pause = state.pause || [];
+
+  row.innerHTML = state.people.map((name,i)=>{
+    const isLeader = !tie && totals[i]===maxTotal && maxTotal>0;
+    const isPaused = !!pause[i];
+    const canRemove = state.people.length > 2;
+    return `
+    <div class="person-pin ${isPaused?'paused':''}" data-person="${i}">
+      <span class="dot" style="background:var(--person${i})"></span>
+      <input class="person-name-input" data-person="${i}" maxlength="16" value="${escapeHtml(name)}" />
+      <span class="crown">${isLeader?'👑':''}</span>
+      <button class="pause-btn ${isPaused?'on':''}" data-person="${i}" data-act="pause" title="${isPaused?(escapeHtml(name)+' está de pausa — clique para voltar'):'Marcar pausa/férias'}">🌴</button>
+      ${canRemove ? `<button class="remove-person-btn" data-person="${i}" data-act="remove" title="Remover ${escapeHtml(name)}">✕</button>` : ''}
+    </div>`;
+  }).join('');
+
+  row.querySelectorAll('.person-name-input').forEach(inp=>{
+    inp.addEventListener('change', ()=>{
+      const i = +inp.dataset.person;
+      state.people[i] = inp.value.trim() || state.people[i];
+      render(); scheduleSave();
+    });
+  });
+  row.querySelectorAll('[data-act="pause"]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const i = +btn.dataset.person;
+      if(!Array.isArray(state.pause)) state.pause = [];
+      state.pause[i] = !state.pause[i];
+      renderPeople();
+      showToast(state.pause[i]
+        ? `${state.people[i]} está de pausa — as tarefas vão para as outras pessoas, sem penalidade.`
+        : `${state.people[i]} voltou da pausa.`);
+      scheduleSave();
+    });
+  });
+  row.querySelectorAll('[data-act="remove"]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const i = +btn.dataset.person;
+      if(state.people.length<=2){ showToast('⚠ Precisa ter pelo menos duas pessoas.'); return; }
+      if(!confirm(`Remover ${state.people[i]}? As tarefas dela nesta semana vão para a primeira pessoa da lista.`)) return;
+      removePerson(i);
+    });
   });
 }
+
+function removePerson(i){
+  // reatribui tarefas da pessoa removida para a pessoa 0 (ou 1, se a removida for a 0)
+  const fallback = i===0 ? 1 : 0;
+  (state.assignments||[]).forEach(day=>{
+    day.forEach(t=>{ if(t.person===i) t.person = fallback; else if(t.person>i) t.person -= 1; });
+  });
+  (state.history||[]).forEach(h=>{ if(h.person===i) h.person = fallback; else if(h.person>i) h.person -= 1; });
+  state.people.splice(i,1);
+  if(Array.isArray(state.pause)) state.pause.splice(i,1);
+  if(Array.isArray(state.helpCount)) state.helpCount.splice(i,1);
+  if(state.theme && Array.isArray(state.theme.personColors)) state.theme.personColors.splice(i,1);
+  render(); scheduleSave();
+  showToast('Pessoa removida.');
+}
+
+document.getElementById('addPersonBtn').addEventListener('click', ()=>{
+  const n = state.people.length;
+  state.people.push('Pessoa ' + (n+1));
+  if(!Array.isArray(state.pause)) state.pause = [];
+  state.pause.push(false);
+  if(!Array.isArray(state.helpCount)) state.helpCount = [];
+  state.helpCount.push(0);
+  if(!state.theme.personColors) state.theme.personColors = [];
+  state.theme.personColors.push(DEFAULT_PERSON_PALETTE[n % DEFAULT_PERSON_PALETTE.length]);
+  render(); scheduleSave();
+  showToast('Pessoa adicionada — edite o nome e a cor em "Personalizar".');
+});
 
 function render(){
   applyTheme();
   applyCardStyle();
-  document.getElementById('name0').value = state.people[0];
-  document.getElementById('name1').value = state.people[1];
+  renderPeople();
   document.getElementById('weekLabel').textContent = 'SEMANA ' + state.weekCounter;
-  updateCrowns();
-  updatePauseUI();
 
   const freqSel = document.getElementById('newTaskFreq');
   freqSel.innerHTML = FREQS.map(f=>`<option value="${f.id}">${f.label}</option>`).join('');
@@ -881,6 +977,22 @@ function applyCardStyle(){
   });
 }
 
+function setHelper(t, helper){
+  t.helpedBy = helper;
+  state.helpCount[helper] = (state.helpCount[helper]||0) + 1;
+  if(state.helpCount[helper] % 3 === 0){
+    state.history.push({
+      id: 'h' + Date.now() + '-' + Math.random().toString(36).slice(2,7),
+      date: new Date().toISOString().slice(0,10),
+      person: helper, effort: 1, minutes: 0, category: t.category, name: 'Bônus por ajudar 3x',
+      bonus: true
+    });
+    showToast(`🤝 ${escapeHtml(state.people[helper])} ajudou 3 vezes — ganhou +1 coração de bônus!`);
+  } else {
+    showToast(`${escapeHtml(state.people[helper])} ajudou nessa tarefa.`);
+  }
+}
+
 function renderDays(){
   const el = document.getElementById('days');
   el.innerHTML = '';
@@ -896,8 +1008,8 @@ function renderDays(){
     dayDiv.dataset.dayIndex = d;
     const tasks = (state.assignments && state.assignments[d]) || [];
     const totalEffort = tasks.reduce((s,t)=>s+t.effort,0);
-    const minutesByPerson = [0,0];
-    tasks.forEach(t=>{ minutesByPerson[t.person] += (t.minutes||0); });
+    const minutesByPerson = state.people.map(()=>0);
+    tasks.forEach(t=>{ if(minutesByPerson[t.person]!=null) minutesByPerson[t.person] += (t.minutes||0); });
 
     let body = '';
     if(tasks.length===0){
@@ -908,27 +1020,28 @@ function renderDays(){
           ? '👎'.repeat(Math.max(1,t.effort))
           : [1,2,3].map(n=>`<span class="${n<=t.effort?'on':''}">${n<=t.effort?'♥':'♡'}</span>`).join('');
         const cat = catById(t.category);
+        const hl = highlighterBg(cat.color);
+        const helpLabel = t.helpedBy!=null ? ('🤝 '+escapeHtml(state.people[t.helpedBy]||'?')) : '🤝 Ajuda?';
         return `
         <div class="task-card ${t.late?'late':''}" data-day="${d}" data-idx="${ti}">
           <span class="drag-handle" title="Segurar e arrastar para outro dia">⠿</span>
-          <span class="cat-dot" style="background:${cat.color}" title="${escapeHtml(cat.name)}"></span>
           <div class="check ${t.done?'done':''}" data-day="${d}" data-idx="${ti}" data-act="toggle"></div>
           <div class="task-info">
-            <div class="task-name ${t.done?'done':''}">${t.late?`<span class="late-badge">${(t.lateStreak||0)>=3?'🚨 TRAVADA':'ATRASADA'}</span> `:''}${escapeHtml(t.name)}</div>
+            <div class="task-name ${t.done?'done':''}">${t.late?`<span class="late-badge">${(t.lateStreak||0)>=3?'🚨 TRAVADA':'ATRASADA'}</span> `:''}<span class="cat-highlight" style="background-image:${hl}" title="${escapeHtml(cat.name)}">${escapeHtml(t.name)}</span></div>
             <div class="task-sub"><span class="dots">${dotsHtml}</span> <span class="mins-badge">· ${t.minutes||0}min</span></div>
           </div>
           <div class="person-col">
-            <div class="person-chip chip${t.person}" data-day="${d}" data-idx="${ti}" data-act="person">${escapeHtml(state.people[t.person])}</div>
-            <button class="help-btn ${t.helpedBy!=null?'on':''}" data-day="${d}" data-idx="${ti}" data-act="help" title="Marcar que ${escapeHtml(state.people[t.person===0?1:0])} ajudou nessa tarefa">${t.helpedBy!=null ? '🤝 '+escapeHtml(state.people[t.helpedBy]) : '🤝 Ajuda?'}</button>
+            <div class="person-chip" style="background:var(--person${t.person}-soft);color:var(--person${t.person})" data-day="${d}" data-idx="${ti}" data-act="person" title="Toque para trocar quem faz">${escapeHtml(state.people[t.person]||'?')}</div>
+            ${state.people.length>1 ? `<button class="help-btn ${t.helpedBy!=null?'on':''}" data-day="${d}" data-idx="${ti}" data-act="help" title="Marcar quem ajudou nessa tarefa">${helpLabel}</button>` : ''}
           </div>
           <button class="skip-btn" data-day="${d}" data-idx="${ti}" data-act="skip" title="Pular essa">✕</button>
         </div>`;
       }).join('');
     }
 
-    const timeParts = [];
-    if(minutesByPerson[0]>0) timeParts.push(`<span style="color:var(--teal)">${escapeHtml(state.people[0])} ≈${minutesByPerson[0]}min</span>`);
-    if(minutesByPerson[1]>0) timeParts.push(`<span style="color:var(--rose)">${escapeHtml(state.people[1])} ≈${minutesByPerson[1]}min</span>`);
+    const timeParts = state.people
+      .map((name,p)=> minutesByPerson[p]>0 ? `<span style="color:var(--person${p})">${escapeHtml(name)} ≈${minutesByPerson[p]}min</span>` : null)
+      .filter(Boolean);
     const timeLine = timeParts.length ? timeParts.join(' · ') : '—';
 
     dayDiv.innerHTML = `
@@ -940,8 +1053,7 @@ function renderDays(){
         <input type="text" class="qa-name" placeholder="Nome da tarefa (ex: limpei o banheiro)" />
         <div class="qa-row">
           <select class="qa-person">
-            <option value="0">${escapeHtml(state.people[0])}</option>
-            <option value="1">${escapeHtml(state.people[1])}</option>
+            ${state.people.map((name,p)=>`<option value="${p}">${escapeHtml(name)}</option>`).join('')}
           </select>
           <select class="qa-effort">
             <option value="1">leve ♥</option>
@@ -980,7 +1092,9 @@ function renderDays(){
   el.querySelectorAll('[data-act="person"]').forEach(elx=>{
     elx.addEventListener('click', ()=>{
       const d = +elx.dataset.day, i = +elx.dataset.idx;
-      state.assignments[d][i].person = state.assignments[d][i].person===0?1:0;
+      const t = state.assignments[d][i];
+      const n = state.people.length;
+      t.person = (t.person + 1) % n; // ciclo: vai passando por todas até voltar pra pessoa 0
       renderDays(); renderStats(); scheduleSave();
     });
   });
@@ -988,25 +1102,22 @@ function renderDays(){
     elx.addEventListener('click', ()=>{
       const d = +elx.dataset.day, i = +elx.dataset.idx;
       const t = state.assignments[d][i];
-      const helper = t.person===0 ? 1 : 0; // a outra pessoa é quem está ajudando
-      if(!Array.isArray(state.helpCount)) state.helpCount = [0,0];
-      if(t.helpedBy!=null){
-        // desmarcar ajuda (foi engano)
-        t.helpedBy = null;
-        state.helpCount[helper] = Math.max(0, state.helpCount[helper]-1);
+      const candidates = state.people.map((_,p)=>p).filter(p=>p!==t.person); // qualquer um, menos quem já está responsável
+      if(candidates.length===0) return;
+      if(!Array.isArray(state.helpCount)) state.helpCount = state.people.map(()=>0);
+
+      if(t.helpedBy==null){
+        setHelper(t, candidates[0]);
       } else {
-        t.helpedBy = helper;
-        state.helpCount[helper] = (state.helpCount[helper]||0) + 1;
-        if(state.helpCount[helper] % 3 === 0){
-          state.history.push({
-            id: 'h' + Date.now() + '-' + Math.random().toString(36).slice(2,7),
-            date: new Date().toISOString().slice(0,10),
-            person: helper, effort: 1, minutes: 0, category: t.category, name: 'Bônus por ajudar 3x',
-            bonus: true
-          });
-          showToast(`🤝 ${escapeHtml(state.people[helper])} ajudou 3 vezes — ganhou +1 coração de bônus!`);
+        const idx = candidates.indexOf(t.helpedBy);
+        if(idx === -1 || idx === candidates.length-1){
+          // ciclo completo: desmarca ajuda
+          state.helpCount[t.helpedBy] = Math.max(0, (state.helpCount[t.helpedBy]||0)-1);
+          t.helpedBy = null;
+          showToast('Ajuda desmarcada.');
         } else {
-          showToast(`${escapeHtml(state.people[helper])} ajudou nessa tarefa.`);
+          state.helpCount[t.helpedBy] = Math.max(0, (state.helpCount[t.helpedBy]||0)-1);
+          setHelper(t, candidates[idx+1]);
         }
       }
       renderDays(); renderStats(); scheduleSave();
@@ -1185,10 +1296,7 @@ function renderCategories(){
 }
 
 function computeStats(){
-  const stats = [
-    {done:0, doneEffort:0, total:0, totalEffort:0},
-    {done:0, doneEffort:0, total:0, totalEffort:0},
-  ];
+  const stats = state.people.map(()=>({done:0, doneEffort:0, total:0, totalEffort:0}));
   (state.assignments||[]).forEach(day=>{
     day.forEach(t=>{
       const s = stats[t.person];
@@ -1201,10 +1309,7 @@ function computeStats(){
 }
 
 function computeHistoryStats(filterFn){
-  const stats = [
-    {count:0, effort:0, penaltyCount:0, penaltyEffort:0, bonusCount:0, bonusEffort:0},
-    {count:0, effort:0, penaltyCount:0, penaltyEffort:0, bonusCount:0, bonusEffort:0},
-  ];
+  const stats = state.people.map(()=>({count:0, effort:0, penaltyCount:0, penaltyEffort:0, bonusCount:0, bonusEffort:0}));
   (state.history||[]).forEach(h=>{
     if(!filterFn(h.date)) return;
     const s = stats[h.person];
@@ -1221,6 +1326,13 @@ function computeHistoryStats(filterFn){
     }
   });
   return stats;
+}
+
+function argmaxLeader(values){
+  const max = Math.max(...values);
+  if(max<=0) return -1;
+  const winners = values.map((v,i)=>v===max?i:-1).filter(i=>i>=0);
+  return winners.length===1 ? winners[0] : -1; // empate = ninguém leva a coroa/prêmio
 }
 
 let statsRange = 'week';
@@ -1259,18 +1371,17 @@ function renderStatsContent(){
 
   if(statsRange==='week'){
     const stats = computeStats();
-    const grandTotalEffort = Math.max(1, stats[0].totalEffort + stats[1].totalEffort);
-    const leader = stats[0].doneEffort===stats[1].doneEffort ? -1 : (stats[0].doneEffort>stats[1].doneEffort ? 0 : 1);
-    content.innerHTML = [0,1].map(p=>{
-      const s = stats[p];
+    const grandTotalEffort = Math.max(1, stats.reduce((s,x)=>s+x.totalEffort,0));
+    const leader = argmaxLeader(stats.map(s=>s.doneEffort));
+    content.innerHTML = stats.map((s,p)=>{
       const pct = Math.round((s.totalEffort / grandTotalEffort) * 100);
-      const color = p===0 ? 'var(--teal)' : 'var(--rose)';
+      const color = `var(--person${p})`;
       const isLeader = p===leader;
       return `
       <div class="stat-block">
         <div class="stat-name" style="color:${color}">${escapeHtml(state.people[p])}${isLeader?' <span class="crown">👑</span>':''}</div>
         <div class="stat-line">${s.done} de ${s.total} tarefas concluídas nesta semana</div>
-        <div class="stat-line">Carga desta semana: ${s.totalEffort} pts (${pct}% do total das duas)</div>
+        <div class="stat-line">Carga desta semana: ${s.totalEffort} pts (${pct}% do total)</div>
         <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
         <div class="stat-line" style="margin-top:8px;">Corações coletados (tarefas concluídas) — cada ★ vale 10 corações:</div>
         <div class="hearts" style="color:${color}">${formatHeartsBadge(s.doneEffort)}</div>
@@ -1286,21 +1397,20 @@ function renderStatsContent(){
     : (d)=> d.slice(0,4) === now.slice(0,4);
   const periodLabel = statsRange==='month' ? 'neste mês' : 'neste ano';
   const stats = computeHistoryStats(filterFn);
-  const grandTotal = Math.max(1, stats[0].effort + stats[1].effort);
-  const leader = stats[0].effort===stats[1].effort ? -1 : (stats[0].effort>stats[1].effort ? 0 : 1);
+  const grandTotal = Math.max(1, stats.reduce((s,x)=>s+x.effort,0));
+  const leader = argmaxLeader(stats.map(s=>s.effort));
 
-  content.innerHTML = [0,1].map(p=>{
-    const s = stats[p];
+  content.innerHTML = stats.map((s,p)=>{
     const pct = Math.round((s.effort / grandTotal) * 100);
-    const color = p===0 ? 'var(--teal)' : 'var(--rose)';
+    const color = `var(--person${p})`;
     const isLeader = p===leader;
     return `
     <div class="stat-block">
       <div class="stat-name" style="color:${color}">${escapeHtml(state.people[p])}${isLeader?' <span class="crown">👑</span>':''}</div>
       <div class="stat-line">${s.count} tarefas concluídas ${periodLabel}</div>
-      ${s.penaltyCount>0 ? `<div class="stat-line" style="color:var(--rose);font-weight:600;">−${s.penaltyEffort} corações descontados por atraso (${s.penaltyCount} tarefa${s.penaltyCount>1?'s':''} ${periodLabel})</div>` : `<div class="stat-line">Nenhuma penalização por atraso ${periodLabel} 🎉</div>`}
+      ${s.penaltyCount>0 ? `<div class="stat-line" style="color:${color};font-weight:600;">−${s.penaltyEffort} corações descontados por atraso (${s.penaltyCount} tarefa${s.penaltyCount>1?'s':''} ${periodLabel})</div>` : `<div class="stat-line">Nenhuma penalização por atraso ${periodLabel} 🎉</div>`}
       ${s.bonusCount>0 ? `<div class="stat-line" style="color:var(--mustard);font-weight:600;">+${s.bonusEffort} coração${s.bonusEffort>1?'ões':''} de bônus por ajudar (${s.bonusCount}x) 🤝</div>` : ''}
-      <div class="stat-line">${s.effort} pts líquidos (${pct}% do total das duas)</div>
+      <div class="stat-line">${s.effort} pts líquidos (${pct}% do total)</div>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
       <div class="hearts" style="color:${color}">${formatHeartsBadge(s.effort)}</div>
       ${isLeader ? `<div class="stat-line" style="margin-top:8px;font-weight:600;color:${color}">👑 ${PRIZES[statsRange]}</div>` : ''}
@@ -1310,11 +1420,12 @@ function renderStatsContent(){
 
 let taskChartInstance = null;
 function renderTaskChart(content){
-  const counts = {}; // taskName -> [count0, count1]
+  const n = state.people.length;
+  const counts = {}; // taskName -> [count0, count1, ...]
   (state.history||[]).forEach(h=>{
     if(h.penalty) return; // só tarefas de fato concluídas
-    if(!counts[h.name]) counts[h.name] = [0,0];
-    counts[h.name][h.person] += 1;
+    if(!counts[h.name]) counts[h.name] = state.people.map(()=>0);
+    if(counts[h.name][h.person]!=null) counts[h.name][h.person] += 1;
   });
   const labels = Object.keys(counts);
 
@@ -1334,23 +1445,21 @@ function renderTaskChart(content){
     </div>
   `;
 
-  const data0 = labels.map(l=>counts[l][0]);
-  const data1 = labels.map(l=>counts[l][1]);
   const styles = getComputedStyle(document.documentElement);
-  const teal = styles.getPropertyValue('--teal').trim() || '#3F7D6E';
-  const rose = styles.getPropertyValue('--rose').trim() || '#B15C68';
+  const datasets = state.people.map((name,p)=>{
+    const color = styles.getPropertyValue(`--person${p}`).trim() || DEFAULT_PERSON_PALETTE[p % DEFAULT_PERSON_PALETTE.length];
+    return {
+      label: name,
+      data: labels.map(l=>counts[l][p]),
+      borderColor: color, backgroundColor: color, tension: 0.25, pointRadius: 4
+    };
+  });
 
   if(taskChartInstance){ taskChartInstance.destroy(); }
   const ctx = document.getElementById('taskChart').getContext('2d');
   taskChartInstance = new Chart(ctx, {
     type: 'line',
-    data: {
-      labels,
-      datasets: [
-        { label: state.people[0], data: data0, borderColor: teal, backgroundColor: teal, tension: 0.25, pointRadius: 4 },
-        { label: state.people[1], data: data1, borderColor: rose, backgroundColor: rose, tension: 0.25, pointRadius: 4 },
-      ]
-    },
+    data: { labels, datasets },
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -1378,21 +1487,6 @@ function formatHeartsBadge(total){
 function escapeHtml(s){
   const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
 }
-
-document.getElementById('name0').addEventListener('change', e=>{ state.people[0]=e.target.value||'Pessoa 1'; renderDays(); scheduleSave(); });
-document.getElementById('name1').addEventListener('change', e=>{ state.people[1]=e.target.value||'Pessoa 2'; renderDays(); scheduleSave(); });
-
-[0,1].forEach(p=>{
-  document.getElementById('pauseBtn'+p).addEventListener('click', ()=>{
-    if(!Array.isArray(state.pause)) state.pause = [false,false];
-    state.pause[p] = !state.pause[p];
-    updatePauseUI();
-    showToast(state.pause[p]
-      ? `${state.people[p]} está de pausa — as tarefas vão para ${state.people[p===0?1:0]}, sem penalidade.`
-      : `${state.people[p]} voltou da pausa.`);
-    scheduleSave();
-  });
-});
 
 document.getElementById('customizeToggle').addEventListener('click', ()=>{
   document.getElementById('customizeBox').classList.toggle('open');
@@ -1425,26 +1519,30 @@ document.getElementById('statsToggle').addEventListener('click', ()=>{
 function syncThemeInputs(){
   const t = state.theme || {};
   document.getElementById('colorPaper').value = t.paper || "#EDEFE8";
-  document.getElementById('colorPerson0').value = t.person0 || "#3F7D6E";
-  document.getElementById('colorPerson1').value = t.person1 || "#B15C68";
-  document.getElementById('colorLabel0').textContent = state.people[0];
-  document.getElementById('colorLabel1').textContent = state.people[1];
+  const row = document.getElementById('personColorRow');
+  if(!row) return;
+  row.innerHTML = state.people.map((name,i)=>`
+    <label style="font-size:12.5px;color:var(--ink-soft);flex:1;min-width:90px;">Cor de ${escapeHtml(name)}
+      <input type="color" class="person-color-input" data-person="${i}" value="${personColor(i)}" style="width:100%;height:34px;border:1px solid var(--line);border-radius:8px;background:none;padding:2px;" />
+    </label>
+  `).join('');
+  row.querySelectorAll('.person-color-input').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const i = +inp.dataset.person;
+      if(!state.theme.personColors) state.theme.personColors = [];
+      state.theme.personColors[i] = inp.value;
+      applyTheme(); renderPeople();
+    });
+    inp.addEventListener('change', ()=>{ scheduleSave(); });
+  });
 }
 document.getElementById('colorPaper').addEventListener('input', e=>{
   state.theme.paper = e.target.value; applyTheme();
 });
 document.getElementById('colorPaper').addEventListener('change', ()=>{ scheduleSave(); });
-document.getElementById('colorPerson0').addEventListener('input', e=>{
-  state.theme.person0 = e.target.value; applyTheme();
-});
-document.getElementById('colorPerson0').addEventListener('change', ()=>{ scheduleSave(); });
-document.getElementById('colorPerson1').addEventListener('input', e=>{
-  state.theme.person1 = e.target.value; applyTheme();
-});
-document.getElementById('colorPerson1').addEventListener('change', ()=>{ scheduleSave(); });
 document.getElementById('btnResetTheme').addEventListener('click', ()=>{
-  state.theme = { paper: "#EDEFE8", person0: "#3F7D6E", person1: "#B15C68" };
-  applyTheme(); syncThemeInputs(); scheduleSave();
+  state.theme = { paper: "#EDEFE8", ink: "#233229", personColors: state.people.map((_,i)=>DEFAULT_PERSON_PALETTE[i % DEFAULT_PERSON_PALETTE.length]) };
+  applyTheme(); syncThemeInputs(); renderPeople(); scheduleSave();
   showToast('Cores restauradas.');
 });
 

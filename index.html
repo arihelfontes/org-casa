@@ -576,7 +576,8 @@ function isDayAllowed(task, d){
 // ====== PREVISÃO DO TEMPO (Butantã, São Paulo) ======
 // Open-Meteo: API gratuita, sem chave, com CORS liberado.
 const WEATHER_LAT = -23.571, WEATHER_LON = -46.708;
-let weatherList = []; // array na ordem da API: índice 0 = hoje, 1 = amanhã, ...
+const WEATHER_PAST_DAYS = 6; // cobre até segunda-feira, mesmo se "hoje" for domingo
+let weatherList = []; // array na ordem da API: índice WEATHER_PAST_DAYS = hoje
 function daysBetween(a, b){
   // diferença em dias de calendário (ignora hora/fuso), a -> b
   const ua = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
@@ -597,7 +598,7 @@ function weatherEmoji(code){
 let weatherFailedOnce = false;
 async function fetchWeather(){
   try{
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${WEATHER_LAT}&longitude=${WEATHER_LON}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=America%2FSao_Paulo&forecast_days=10`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${WEATHER_LAT}&longitude=${WEATHER_LON}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=America%2FSao_Paulo&past_days=${WEATHER_PAST_DAYS}&forecast_days=7`;
     const res = await fetch(url);
     if(!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
@@ -996,7 +997,7 @@ function renderDays(){
   DAY_NAMES.forEach((name, d)=>{
     const dateObj = new Date(monday); dateObj.setDate(monday.getDate()+d);
     const dateStr = dateObj.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
-    const w = weatherList[daysBetween(today, dateObj)];
+    const w = weatherList[daysBetween(today, dateObj) + WEATHER_PAST_DAYS];
     const wCompact = w ? `${weatherEmoji(w.code)} ${Math.round((w.tmax+w.tmin)/2)}°` : '';
     const wDetail = w ? `${weatherEmoji(w.code)} ${Math.round(w.tmin)}°–${Math.round(w.tmax)}°` : '';
     const weatherHtml = w ? `<span class="weather-badge" data-act="weather" data-compact="${escapeHtml(wCompact)}" data-detail="${escapeHtml(wDetail)}" title="Toque para ver máx/mín">${wCompact}</span>` : '';

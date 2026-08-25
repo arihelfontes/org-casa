@@ -234,7 +234,6 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
   .weather-badge{
     font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);
     margin-right:6px;white-space:nowrap;cursor:pointer;
-    border-bottom:1px dotted var(--line);
   }
   .task-card.late{
     background:rgba(201,138,46,0.10);
@@ -577,12 +576,12 @@ function isDayAllowed(task, d){
 // ====== PREVISÃO DO TEMPO (Butantã, São Paulo) ======
 // Open-Meteo: API gratuita, sem chave, com CORS liberado.
 const WEATHER_LAT = -23.571, WEATHER_LON = -46.708;
-let weatherData = {}; // 'YYYY-MM-DD' -> {code, tmax, tmin}
-function localISODate(d){
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,'0');
-  const dd = String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${dd}`;
+let weatherList = []; // array na ordem da API: índice 0 = hoje, 1 = amanhã, ...
+function daysBetween(a, b){
+  // diferença em dias de calendário (ignora hora/fuso), a -> b
+  const ua = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
+  const ub = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
+  return Math.round((ub - ua) / 86400000);
 }
 function weatherEmoji(code){
   if(code===0) return '☀️';
@@ -604,15 +603,12 @@ async function fetchWeather(){
     const data = await res.json();
     console.log('previsão do tempo recebida:', data);
     if(!data || !data.daily || !data.daily.time) throw new Error('resposta sem dados diários');
-    const map = {};
-    data.daily.time.forEach((dateStr, i)=>{
-      map[dateStr] = {
-        code: (data.daily.weather_code || data.daily.weathercode)[i],
-        tmax: data.daily.temperature_2m_max[i],
-        tmin: data.daily.temperature_2m_min[i],
-      };
-    });
-    weatherData = map;
+    weatherList = data.daily.time.map((dateStr, i)=>({
+      date: dateStr,
+      code: (data.daily.weather_code || data.daily.weathercode)[i],
+      tmax: data.daily.temperature_2m_max[i],
+      tmin: data.daily.temperature_2m_min[i],
+    }));
     renderDays(); // reinjeta os badges de clima nos cards já renderizados
   }catch(e){
     console.warn('previsão do tempo indisponível:', e);
@@ -1000,7 +996,7 @@ function renderDays(){
   DAY_NAMES.forEach((name, d)=>{
     const dateObj = new Date(monday); dateObj.setDate(monday.getDate()+d);
     const dateStr = dateObj.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
-    const w = weatherData[localISODate(dateObj)];
+    const w = weatherList[daysBetween(today, dateObj)];
     const wCompact = w ? `${weatherEmoji(w.code)} ${Math.round((w.tmax+w.tmin)/2)}°` : '';
     const wDetail = w ? `${weatherEmoji(w.code)} ${Math.round(w.tmin)}°–${Math.round(w.tmax)}°` : '';
     const weatherHtml = w ? `<span class="weather-badge" data-act="weather" data-compact="${escapeHtml(wCompact)}" data-detail="${escapeHtml(wDetail)}" title="Toque para ver máx/mín">${wCompact}</span>` : '';

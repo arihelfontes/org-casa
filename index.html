@@ -104,6 +104,16 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
     color:var(--ink-soft);
     margin:0;
   }
+  h1[contenteditable], .subtitle[contenteditable]{
+    outline:none;border-radius:6px;padding:2px 4px;margin-left:-4px;
+    cursor:text;
+  }
+  h1[contenteditable]:hover, .subtitle[contenteditable]:hover{
+    background:rgba(0,0,0,0.03);
+  }
+  h1[contenteditable]:focus, .subtitle[contenteditable]:focus{
+    background:var(--paper-card);box-shadow:0 0 0 1.5px var(--line);
+  }
 
   .people-row{
     display:flex;gap:10px;margin-top:18px;position:relative;z-index:1;flex-wrap:wrap;
@@ -408,8 +418,8 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
 <div class="wrap">
   <header>
     <div class="line"></div>
-    <h1>Mutirão da Casa</h1>
-    <p class="subtitle">Tarefas espalhadas pela semana — sem sobrecarregar o fim de semana.</p>
+    <h1 id="appTitle" contenteditable="true" spellcheck="false">Mutirão da Casa</h1>
+    <p class="subtitle" id="appSubtitle" contenteditable="true" spellcheck="false">Tarefas espalhadas pela semana — sem sobrecarregar o fim de semana.</p>
     <div class="people-row" id="peopleRow"></div>
     <button class="add-person-btn" id="addPersonBtn" title="Adicionar outra pessoa">+ pessoa</button>
     <div id="autosaveWarning" style="display:none;margin-top:12px;background:var(--rose-soft);color:var(--rose);border-radius:12px;padding:10px 12px;font-size:12px;font-weight:500;">
@@ -526,6 +536,8 @@ let state = {
   pause: [false, false], // modo férias/pausa por pessoa (array de tamanho == número de pessoas)
   helpCount: [0, 0], // quantas vezes cada pessoa foi marcada como "ajudante" numa tarefa alheia
   cardStyle: 'default', // 'default' | 'notebook' | 'sticky' | 'torn'
+  appTitle: 'Mutirão da Casa',
+  appSubtitle: 'Tarefas espalhadas pela semana — sem sobrecarregar o fim de semana.',
 };
 
 const DEFAULT_PERSON_PALETTE = ["#3F7D6E","#B15C68","#C98A2E","#6B4C9A","#4C7EA8","#8FA24E","#A2585E","#7A6FA0"];
@@ -682,6 +694,8 @@ async function load(){
 function migrateState(){
   if(!Array.isArray(state.history)) state.history = [];
   if(!state.cardStyle) state.cardStyle = 'default';
+  if(state.appTitle==null) state.appTitle = 'Mutirão da Casa';
+  if(state.appSubtitle==null) state.appSubtitle = 'Tarefas espalhadas pela semana — sem sobrecarregar o fim de semana.';
   if(!Array.isArray(state.weekArchive)){
     // migra o snapshot único antigo (se existir) para a nova pilha multi-nível
     state.weekArchive = state.previousWeekSnapshot ? [state.previousWeekSnapshot] : [];
@@ -719,8 +733,9 @@ function startPolling(){
   pollHandle = setInterval(async ()=>{
     // não atualiza a tela enquanto a pessoa está digitando/selecionando algo,
     // senão o campo perde o foco e o teclado fecha sozinho no celular
-    const activeTag = document.activeElement && document.activeElement.tagName;
-    if(activeTag==='INPUT' || activeTag==='TEXTAREA' || activeTag==='SELECT') return;
+    const active = document.activeElement;
+    const activeTag = active && active.tagName;
+    if(activeTag==='INPUT' || activeTag==='TEXTAREA' || activeTag==='SELECT' || (active && active.isContentEditable)) return;
     try{
       const res = await fetch(FIREBASE_DB_URL + DB_PATH);
       const data = await res.json();
@@ -954,6 +969,10 @@ function render(){
   applyCardStyle();
   renderPeople();
   document.getElementById('weekLabel').textContent = 'SEMANA ' + state.weekCounter;
+  const titleEl = document.getElementById('appTitle');
+  const subtitleEl = document.getElementById('appSubtitle');
+  if(titleEl && document.activeElement!==titleEl) titleEl.textContent = state.appTitle;
+  if(subtitleEl && document.activeElement!==subtitleEl) subtitleEl.textContent = state.appSubtitle;
 
   const freqSel = document.getElementById('newTaskFreq');
   freqSel.innerHTML = FREQS.map(f=>`<option value="${f.id}">${f.label}</option>`).join('');
@@ -1721,6 +1740,29 @@ function onDragEnd(e){
   window.removeEventListener('pointerup', onDragEnd);
   dragState = null;
 }
+
+function setupEditableHeader(){
+  const titleEl = document.getElementById('appTitle');
+  const subtitleEl = document.getElementById('appSubtitle');
+  [titleEl, subtitleEl].forEach(el=>{
+    el.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter'){ e.preventDefault(); el.blur(); }
+    });
+  });
+  titleEl.addEventListener('blur', ()=>{
+    const text = titleEl.textContent.trim() || 'Mutirão da Casa';
+    titleEl.textContent = text;
+    state.appTitle = text;
+    scheduleSave();
+  });
+  subtitleEl.addEventListener('blur', ()=>{
+    const text = subtitleEl.textContent.trim() || 'Tarefas espalhadas pela semana — sem sobrecarregar o fim de semana.';
+    subtitleEl.textContent = text;
+    state.appSubtitle = text;
+    scheduleSave();
+  });
+}
+setupEditableHeader();
 
 load();
 fetchWeather();

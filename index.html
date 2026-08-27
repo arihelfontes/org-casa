@@ -462,6 +462,12 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
         <div class="style-opt" data-style="sticky"><div class="style-swatch swatch-sticky"></div><span>Post-it</span></div>
         <div class="style-opt" data-style="torn"><div class="style-swatch swatch-torn"></div><span>Papel rasgado</span></div>
       </div>
+      <p class="hint" id="weatherCityCurrent" style="margin-top:14px;">Local atual: —</p>
+      <div class="add-form">
+        <input type="text" id="weatherCityInput" placeholder="Cidade ou bairro (ex: Santo André, SP)" />
+        <button class="btn-ghost" id="btnSearchWeatherCity" type="button">🔎 Buscar</button>
+      </div>
+      <div id="weatherCityResults"></div>
       <div class="add-form">
         <button class="btn-ghost" id="btnResetWeekCounter">↺ Reiniciar contagem para Semana 1</button>
         <button class="btn-ghost" id="btnResetScores">🗑️ Zerar corações, tarefas concluídas e atrasadas</button>
@@ -587,9 +593,9 @@ function isDayAllowed(task, d){
   return task.allowedDays.includes(d);
 }
 
-// ====== PREVISÃO DO TEMPO (Butantã, São Paulo) ======
+// ====== PREVISÃO DO TEMPO ======
 // Open-Meteo: API gratuita, sem chave, com CORS liberado.
-const WEATHER_LAT = -23.571, WEATHER_LON = -46.708;
+const WEATHER_DEFAULT_LOC = { name: 'Butantã, São Paulo', lat: -23.571, lon: -46.708 };
 const WEATHER_PAST_DAYS = 6; // cobre até segunda-feira, mesmo se "hoje" for domingo
 let weatherList = []; // array na ordem da API: índice WEATHER_PAST_DAYS = hoje
 function daysBetween(a, b){
@@ -612,7 +618,8 @@ function weatherEmoji(code){
 let weatherFailedOnce = false;
 async function fetchWeather(){
   try{
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${WEATHER_LAT}&longitude=${WEATHER_LON}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=America%2FSao_Paulo&past_days=${WEATHER_PAST_DAYS}&forecast_days=7`;
+    const loc = state.weatherLoc || WEATHER_DEFAULT_LOC;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=America%2FSao_Paulo&past_days=${WEATHER_PAST_DAYS}&forecast_days=7`;
     const res = await fetch(url);
     if(!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
@@ -632,6 +639,44 @@ async function fetchWeather(){
       showToast('⚠ Não consegui buscar a previsão do tempo agora.');
     }
   }
+}
+async function searchWeatherCity(){
+  const input = document.getElementById('weatherCityInput');
+  const resultsEl = document.getElementById('weatherCityResults');
+  const q = input.value.trim();
+  if(!q) return;
+  resultsEl.innerHTML = '<p class="hint">Buscando...</p>';
+  try{
+    const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=pt&format=json`);
+    const data = await res.json();
+    if(!data.results || data.results.length===0){
+      resultsEl.innerHTML = '<p class="hint">Nada encontrado — tenta outro nome (ex: só a cidade, sem o bairro).</p>';
+      return;
+    }
+    resultsEl.innerHTML = data.results.map((r,i)=>{
+      const label = [r.name, r.admin1, r.country].filter(Boolean).join(', ');
+      return `<button type="button" class="btn-ghost weather-city-opt" data-i="${i}" style="display:block;width:100%;text-align:left;margin-bottom:6px;">📍 ${escapeHtml(label)}</button>`;
+    }).join('');
+    resultsEl.querySelectorAll('.weather-city-opt').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const r = data.results[+btn.dataset.i];
+        state.weatherLoc = { name: [r.name, r.admin1].filter(Boolean).join(', '), lat: r.latitude, lon: r.longitude };
+        resultsEl.innerHTML = '';
+        input.value = '';
+        updateWeatherCityLabel();
+        scheduleSave();
+        weatherFailedOnce = false;
+        fetchWeather();
+        showToast(`📍 Local do clima atualizado para ${state.weatherLoc.name}.`);
+      });
+    });
+  }catch(e){
+    resultsEl.innerHTML = '<p class="hint">Erro ao buscar — verifica a internet e tenta de novo.</p>';
+  }
+}
+function updateWeatherCityLabel(){
+  const el = document.getElementById('weatherCityCurrent');
+  if(el) el.textContent = 'Local atual: ' + ((state.weatherLoc||WEATHER_DEFAULT_LOC).name);
 }
 
 // ====== CONFIGURAÇÃO DO BANCO (Firebase Realtime Database) ======
@@ -985,6 +1030,7 @@ function render(){
   const subtitleEl = document.getElementById('appSubtitle');
   if(titleEl && document.activeElement!==titleEl) titleEl.textContent = state.appTitle;
   if(subtitleEl && document.activeElement!==subtitleEl) subtitleEl.textContent = state.appSubtitle;
+  updateWeatherCityLabel();
 
   const freqSel = document.getElementById('newTaskFreq');
   freqSel.innerHTML = FREQS.map(f=>`<option value="${f.id}">${f.label}</option>`).join('');
@@ -1789,6 +1835,11 @@ function setupEditableHeader(){
   });
 }
 setupEditableHeader();
+
+document.getElementById('btnSearchWeatherCity').addEventListener('click', searchWeatherCity);
+document.getElementById('weatherCityInput').addEventListener('keydown', (e)=>{
+  if(e.key==='Enter'){ e.preventDefault(); searchWeatherCity(); }
+});
 
 load();
 fetchWeather();

@@ -696,6 +696,18 @@ function migrateState(){
   if(!state.cardStyle) state.cardStyle = 'default';
   if(state.appTitle==null) state.appTitle = 'Mutirão da Casa';
   if(state.appSubtitle==null) state.appSubtitle = 'Tarefas espalhadas pela semana — sem sobrecarregar o fim de semana.';
+  if(!state._helpBonusBugFixed){
+    // correção única: antes, desmarcar uma "Ajuda?" que tinha completado 3x não removia
+    // o coração de bônus já lançado. Limpa o que ficou incorreto e zera a contagem
+    // (as próximas 3 ajudas de cada pessoa já contam certinho a partir de agora).
+    const before = (state.history||[]).length;
+    state.history = (state.history||[]).filter(h=>!h.bonus);
+    const removed = before - state.history.length;
+    if(Array.isArray(state.helpCount)) state.helpCount = state.helpCount.map(()=>0);
+    state._helpBonusBugFixed = true;
+    if(removed>0) setTimeout(()=>showToast(`🔧 Corrigido: removi ${removed} coração${removed>1?'ões':''} de bônus que tinha ficado preso por um bug. Contagem de ajudas reiniciada.`), 800);
+    scheduleSave();
+  }
   if(!Array.isArray(state.weekArchive)){
     // migra o snapshot único antigo (se existir) para a nova pilha multi-nível
     state.weekArchive = state.previousWeekSnapshot ? [state.previousWeekSnapshot] : [];
@@ -1008,6 +1020,20 @@ function setHelper(t, helper){
   }
 }
 
+function unsetHelper(helper){
+  // desfaz uma marcação de ajuda: se essa era a 3ª (a que gerou o bônus), remove o bônus também
+  const wasBonusThreshold = (state.helpCount[helper]||0) > 0 && (state.helpCount[helper]||0) % 3 === 0;
+  state.helpCount[helper] = Math.max(0, (state.helpCount[helper]||0) - 1);
+  if(wasBonusThreshold){
+    for(let i=state.history.length-1; i>=0; i--){
+      if(state.history[i].bonus && state.history[i].person===helper){
+        state.history.splice(i,1);
+        break;
+      }
+    }
+  }
+}
+
 function renderDays(){
   const el = document.getElementById('days');
   el.innerHTML = '';
@@ -1129,11 +1155,11 @@ function renderDays(){
         const idx = candidates.indexOf(t.helpedBy);
         if(idx === -1 || idx === candidates.length-1){
           // ciclo completo: desmarca ajuda
-          state.helpCount[t.helpedBy] = Math.max(0, (state.helpCount[t.helpedBy]||0)-1);
+          unsetHelper(t.helpedBy);
           t.helpedBy = null;
           showToast('Ajuda desmarcada.');
         } else {
-          state.helpCount[t.helpedBy] = Math.max(0, (state.helpCount[t.helpedBy]||0)-1);
+          unsetHelper(t.helpedBy);
           setHelper(t, candidates[idx+1]);
         }
       }

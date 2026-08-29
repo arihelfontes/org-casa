@@ -190,7 +190,7 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
   .day.weekend{ background: linear-gradient(180deg, var(--paper-card), #F3F0E9); }
 
   /* seletor de estilo dos cartões */
-  .style-picker{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0;}
+  .style-picker{display:grid;grid-template-columns:repeat(auto-fit, minmax(72px,1fr));gap:8px;margin:10px 0;}
   .style-opt{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;padding:6px 2px;border-radius:10px;border:1.5px solid transparent;}
   .style-opt.on{border-color:var(--teal);background:var(--teal-soft);}
   .style-opt span{font-size:10.5px;color:var(--ink-soft);text-align:center;}
@@ -581,29 +581,48 @@ function mixHex(hex, withHex, ratio){
   );
 }
 function svgDataUri(inner, w, h){
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>${inner}</svg>`;
+  const cleanInner = inner.replace(/\s+/g, ' ').trim(); // remove quebras de linha cruas (inválidas dentro de url() do CSS)
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>${cleanInner}</svg>`;
   return 'data:image/svg+xml,' + svg.replace(/</g,'%3C').replace(/>/g,'%3E').replace(/#/g,'%23');
 }
 const BG_HEART_PATH = 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
 const BG_MOON_PATH = 'M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10c1.82,0,3.53-.5,5-1.35-3.19-1.86-5.5-5.4-5.5-9.65s2.31-7.79,5.5-9.65C15.53,2.5,13.82,2,12,2z';
-const BG_STAR_PATH = 'M5 0 L6.2 3.8 L10 5 L6.2 6.2 L5 10 L3.8 6.2 L0 5 L3.8 3.8 Z';
+const BG_SPARK_PATH = 'M5 0 L6.2 3.8 L10 5 L6.2 6.2 L5 10 L3.8 6.2 L0 5 L3.8 3.8 Z';
+const BG_STAR5_PATH = 'M12 1.5 L14.7 8.6 L22.2 9.2 L16.4 14 L18.3 21.3 L12 17.2 L5.7 21.3 L7.6 14 L1.8 9.2 L9.3 8.6 Z';
 const BG_PAW = "<ellipse cx='12' cy='17' rx='6' ry='5'/><ellipse cx='5' cy='8' rx='2.6' ry='3.2'/><ellipse cx='10' cy='4' rx='2.6' ry='3.2'/><ellipse cx='15' cy='4' rx='2.6' ry='3.2'/><ellipse cx='19' cy='8' rx='2.6' ry='3.2'/>";
 function bgPatternDataUri(type, color){
   if(!type || type==='none') return null;
   const c = color || '#B15C68';
   if(type==='hearts'){
+    // várias, tamanhos/rotação/opacidade variados, bem espalhadas (tipo estampa de tecido)
     return svgDataUri(`<g fill='${c}'>
-      <path d='${BG_HEART_PATH}' transform='translate(2,2) scale(0.55) rotate(-10 12 12)' opacity='0.5'/>
-      <path d='${BG_HEART_PATH}' transform='translate(30,28) scale(0.34) rotate(14 12 12)' opacity='0.35'/>
-    </g>`, 56, 56);
+      <path d='${BG_HEART_PATH}' transform='translate(2,0) scale(0.5) rotate(-14 12 12)' opacity='0.95'/>
+      <path d='${BG_HEART_PATH}' transform='translate(38,4) scale(0.32) rotate(18 12 12)' opacity='0.6'/>
+      <path d='${BG_HEART_PATH}' transform='translate(16,20) scale(0.4) rotate(6 12 12)' opacity='0.75'/>
+      <path d='${BG_HEART_PATH}' transform='translate(48,26) scale(0.55) rotate(-8 12 12)' opacity='0.9'/>
+      <path d='${BG_HEART_PATH}' transform='translate(2,44) scale(0.34) rotate(20 12 12)' opacity='0.55'/>
+      <path d='${BG_HEART_PATH}' transform='translate(26,46) scale(0.46) rotate(-16 12 12)' opacity='0.8'/>
+    </g>`, 72, 72);
   }
   if(type==='stars'){
+    // lua, estrelas de vários tamanhos e uma "constelação" (linha ligando pontinhos), tipo mapa celeste
     return svgDataUri(`<g fill='${c}'>
-      <path d='${BG_MOON_PATH}' transform='translate(8,8) scale(0.9)' opacity='0.55'/>
-      <path d='${BG_STAR_PATH}' transform='translate(42,14)' opacity='0.45'/>
-      <path d='${BG_STAR_PATH}' transform='translate(54,46) scale(0.7)' opacity='0.35'/>
-      <path d='${BG_STAR_PATH}' transform='translate(16,50) scale(0.55)' opacity='0.4'/>
-    </g>`, 74, 74);
+      <path d='${BG_STAR5_PATH}' transform='translate(50,10) scale(0.6)' opacity='0.85'/>
+      <path d='${BG_SPARK_PATH}' transform='translate(30,4)' opacity='0.55'/>
+      <path d='${BG_SPARK_PATH}' transform='translate(66,42) scale(0.8)' opacity='0.5'/>
+      <path d='${BG_SPARK_PATH}' transform='translate(8,50) scale(0.6)' opacity='0.45'/>
+      <path d='${BG_STAR5_PATH}' transform='translate(44,54) scale(0.4)' opacity='0.7'/>
+      <path d='${BG_MOON_PATH}' transform='translate(60,60) scale(0.32)' opacity='0.75'/>
+      <path d='${BG_MOON_PATH}' transform='translate(4,4) scale(0.28)' opacity='0.7'/>
+      <g stroke='${c}' stroke-width='1.1' fill='none' opacity='0.5'>
+        <polyline points='4,30 14,22 24,26 20,38'/>
+      </g>
+      <g fill='${c}' opacity='0.6'>
+        <circle cx='4' cy='30' r='1.3'/><circle cx='14' cy='22' r='1.3'/><circle cx='24' cy='26' r='1.3'/><circle cx='20' cy='38' r='1.3'/>
+      </g>
+      <circle cx='36' cy='64' r='1' opacity='0.4'/>
+      <circle cx='16' cy='10' r='1' opacity='0.4'/>
+    </g>`, 80, 80);
   }
   if(type==='paws'){
     return svgDataUri(`<g fill='${c}'>
@@ -893,6 +912,9 @@ function recentLoadScore(days){
   return scores;
 }
 
+// pares de tarefas que devem sempre cair no mesmo dia quando as duas existirem na semana
+const TASK_PAIRS = { 'varrer': 'pano-chao', 'pano-chao': 'varrer' };
+
 function distributeWeek(isFirst, preserveDone){
   const wc = state.weekCounter;
   const pause = state.pause || [false,false];
@@ -918,6 +940,7 @@ function distributeWeek(isFirst, preserveDone){
   const dayLoad = [0,0,0,0,0,0,0];
   const dayTasksToday = [new Set(),new Set(),new Set(),new Set(),new Set(),new Set(),new Set()];
   const taskDaysUsed = {}; // taskId -> Set of day indices already used this week
+  const pairedDay = {}; // taskId -> dia mais recente em que ela caiu, pra "casar" com a tarefa parceira
   // viés de justiça de longo prazo: quem trabalhou mais nos últimos 28 dias começa "mais carregado"
   const recent = recentLoadScore(28);
   const personLoad = recent.map(r=>r*0.4);
@@ -934,6 +957,7 @@ function distributeWeek(isFirst, preserveDone){
     dayTasksToday[pd.day].add(pd.taskId);
     if(!taskDaysUsed[pd.taskId]) taskDaysUsed[pd.taskId] = new Set();
     taskDaysUsed[pd.taskId].add(pd.day);
+    pairedDay[pd.taskId] = pd.day;
     if(personLoad[pd.person]!=null) personLoad[pd.person] += score;
   });
 
@@ -945,9 +969,19 @@ function distributeWeek(isFirst, preserveDone){
     };
     const allowed = (d)=> (!inst.allowedDays || inst.allowedDays.length===0) ? true : inst.allowedDays.includes(d);
     const score = combinedScore(inst);
-    // pass 1: skip same day AND days adjacent to another day this same task already landed on
     let bestDay = -1, bestScore = Infinity;
-    for(let d=0; d<7; d++){
+    // casamento de par: se a tarefa parceira (ex: "passar pano" com "varrer") já caiu nalgum dia
+    // esta semana, tenta cair no mesmo dia — só não força se esse dia for proibido pra essa tarefa
+    // ou já estiver ocupado por outra instância dela mesma.
+    const partnerId = TASK_PAIRS[inst.taskId];
+    if(partnerId!=null && pairedDay[partnerId]!=null){
+      const pd = pairedDay[partnerId];
+      if(allowed(pd) && !dayTasksToday[pd].has(inst.taskId)){
+        bestDay = pd;
+      }
+    }
+    // pass 1: skip same day AND days adjacent to another day this same task already landed on
+    if(bestDay === -1) for(let d=0; d<7; d++){
       if(!allowed(d)) continue;
       if(dayTasksToday[d].has(inst.taskId)) continue;
       if(isAdjacent(d)) continue;
@@ -981,6 +1015,7 @@ function distributeWeek(isFirst, preserveDone){
     dayTasksToday[bestDay].add(inst.taskId);
     usedDays.add(bestDay);
     taskDaysUsed[inst.taskId] = usedDays;
+    pairedDay[inst.taskId] = bestDay;
     // pessoa com menos carga acumulada (peso + tempo) fica com a tarefa — respeitando pausa
     let person;
     if(forcedPerson!=null){

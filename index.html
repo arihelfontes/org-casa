@@ -748,6 +748,10 @@ async function persist(){
     savePending = true;
     return;
   }
+  // trava de segurança: nunca deixa um estado quebrado (sem pessoas, sem tema) ser salvo —
+  // se algo corrompeu a memória local por qualquer motivo, conserta ANTES de salvar,
+  // pra corrupção nunca "grudar" no banco e se espalhar pro outro celular
+  migrateState();
   saveInFlight = true;
   try{
     const res = await fetch(FIREBASE_DB_URL + DB_PATH, {
@@ -1969,6 +1973,16 @@ setupEditableHeader();
 document.getElementById('btnSearchWeatherCity').addEventListener('click', searchWeatherCity);
 document.getElementById('weatherCityInput').addEventListener('keydown', (e)=>{
   if(e.key==='Enter'){ e.preventDefault(); searchWeatherCity(); }
+});
+
+window.addEventListener('error', (e)=>{
+  console.error('Erro capturado, tentando recuperar:', e.error || e.message);
+  try{
+    migrateState();
+    render();
+  }catch(e2){
+    console.error('Falha ao tentar recuperar:', e2);
+  }
 });
 
 load();

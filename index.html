@@ -816,9 +816,19 @@ function migrateState(){
   }
   if(!state.theme.paper){ state.theme.paper = "#EDEFE8"; repaired = true; }
   if(!state.theme.ink){ state.theme.ink = "#233229"; repaired = true; }
-  if(!Array.isArray(state.assignments) || state.assignments.length!==7){
+  if(!Array.isArray(state.assignments)){
     state.assignments = [[],[],[],[],[],[],[]];
     repaired = true;
+  } else if(state.assignments.length!==7){
+    // NÃO apaga os dias existentes — o Firebase costuma "sumir" com dias vazios (ex: fim de
+    // semana sem tarefa) ao salvar, o que encurta esse array sem isso ser corrupção de verdade.
+    // Só completa os dias que faltam, preservando qualquer tarefa real que já esteja lá.
+    const fixed = [[],[],[],[],[],[],[]];
+    for(let i=0;i<7;i++){
+      if(Array.isArray(state.assignments[i])) fixed[i] = state.assignments[i];
+    }
+    state.assignments = fixed;
+    // isso é rotina (não é corrupção de verdade), então não aciona o aviso de "falha nos dados"
   }
   if(repaired){
     console.warn('Estado corrompido detectado e corrigido automaticamente.');
@@ -1890,7 +1900,11 @@ document.getElementById('btnPrevWeek').addEventListener('click', ()=>{
   }
   const snap = state.weekArchive.pop();
   state.weekCounter = snap.weekCounter;
-  state.assignments = snap.assignments;
+  // o snapshot também passou pelo Firebase e pode ter vindo encurtado (mesmo motivo do
+  // migrateState) — completa os dias que faltarem em vez de deixar state.assignments curto.
+  const restoredDays = [[],[],[],[],[],[],[]];
+  (snap.assignments||[]).forEach((day,i)=>{ if(i<7 && Array.isArray(day)) restoredDays[i] = day; });
+  state.assignments = restoredDays;
   // remove do histórico tudo que foi criado a partir dessa transição em diante —
   // não só as penalidades, mas também conclusões feitas na semana que está sendo desfeita.
   // Entradas antigas sem timestamp (de antes dessa correção) são mantidas, por segurança.

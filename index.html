@@ -864,12 +864,21 @@ function migrateState(){
   while(state.helpCount.length < n) state.helpCount.push(0);
   while(state.theme.personColors.length < n) state.theme.personColors.push(DEFAULT_PERSON_PALETTE[state.theme.personColors.length % DEFAULT_PERSON_PALETTE.length]);
 
+  // o Firebase às vezes devolve um dia sem tarefas como null em vez de [] —
+  // sem isso, qualquer .forEach num dia "vazio" quebrava a função inteira no meio,
+  // e era exatamente isso que travava a renderização de pessoas/tema
+  if(!Array.isArray(state.assignments)) state.assignments = [];
+  for(let d=0; d<7; d++){
+    if(!Array.isArray(state.assignments[d])) state.assignments[d] = [];
+  }
+  state.assignments.length = 7;
+
   (state.tasks||[]).forEach(t=>{
     if(t.minutes==null) t.minutes = 15;
   });
   if(state.assignments){
     state.assignments.forEach(day=>{
-      day.forEach(t=>{
+      (day||[]).forEach(t=>{
         if(t.minutes==null) t.minutes = 15;
       });
     });
@@ -1103,7 +1112,7 @@ function removePerson(i){
   // reatribui tarefas da pessoa removida para a pessoa 0 (ou 1, se a removida for a 0)
   const fallback = i===0 ? 1 : 0;
   (state.assignments||[]).forEach(day=>{
-    day.forEach(t=>{ if(t.person===i) t.person = fallback; else if(t.person>i) t.person -= 1; });
+    (day||[]).forEach(t=>{ if(t.person===i) t.person = fallback; else if(t.person>i) t.person -= 1; });
   });
   (state.history||[]).forEach(h=>{ if(h.person===i) h.person = fallback; else if(h.person>i) h.person -= 1; });
   state.people.splice(i,1);
@@ -1470,7 +1479,7 @@ function renderBank(){
 function computeStats(){
   const stats = state.people.map(()=>({done:0, doneEffort:0, total:0, totalEffort:0}));
   (state.assignments||[]).forEach(day=>{
-    day.forEach(t=>{
+    (day||[]).forEach(t=>{
       const s = stats[t.person];
       if(!s) return;
       s.total += 1; s.totalEffort += t.effort;
@@ -1736,7 +1745,7 @@ document.getElementById('btnResetScores').addEventListener('click', ()=>{
   if(!confirm('Isso apaga TODO o histórico de corações/tarefas concluídas (estatísticas de semana, mês, ano e o gráfico zeram) e tira o selo de "atrasada"/"travada" de qualquer tarefa pendente — elas continuam na lista, só voltam ao normal. Essa ação não tem volta. Confirmar?')) return;
   state.history = [];
   (state.assignments||[]).forEach(day=>{
-    day.forEach(t=>{
+    (day||[]).forEach(t=>{
       if(t.late) t.late = false;
       if(t.lateStreak) delete t.lateStreak;
       if(t.historyId) delete t.historyId;
@@ -1773,7 +1782,7 @@ document.getElementById('btnRedistribute').addEventListener('click', ()=>{
   const lateTasks = [];
   const doneTasks = [];
   (state.assignments||[]).forEach((day,d)=>{
-    day.forEach(t=>{
+    (day||[]).forEach(t=>{
       if(t.late){
         lateTasks.push({...t});
       } else if(t.done){
@@ -1796,7 +1805,7 @@ document.getElementById('btnRedistribute').addEventListener('click', ()=>{
 document.getElementById('btnSyncTasks').addEventListener('click', ()=>{
   let count = 0;
   (state.assignments||[]).forEach(day=>{
-    day.forEach(t=>{
+    (day||[]).forEach(t=>{
       const def = state.tasks.find(x=>x.id===t.taskId);
       if(!def) return; // tarefa foi excluída do banco: deixa a instância como está
       if(t.name!==def.name || t.effort!==def.effort || t.minutes!==def.minutes){
@@ -1817,7 +1826,7 @@ document.getElementById('btnNewWeek').addEventListener('click', ()=>{
   const pause = state.pause || [false,false];
   const leftovers = [];
   (state.assignments||[]).forEach(day=>{
-    day.forEach(t=>{
+    (day||[]).forEach(t=>{
       if(!t.done){
         const newStreak = (t.lateStreak||0) + 1;
         // depois de 2 semanas seguidas atrasada, ela "trava": para de penalizar e vira um alerta

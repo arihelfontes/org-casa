@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reset único de tarefas duplicadas</title>
+<style>
+  body{font-family:sans-serif;max-width:560px;margin:40px auto;padding:0 16px;line-height:1.5;color:#233229;}
+  button{background:#233229;color:#fff;border:none;padding:14px 20px;border-radius:10px;font-size:15px;margin-top:16px;cursor:pointer;}
+  button:disabled{opacity:0.5;}
+  pre{background:#f2f2ee;padding:12px;border-radius:8px;white-space:pre-wrap;font-size:13px;}
+</style>
+</head>
+<body>
+  <h2>Reset único de tarefas duplicadas</h2>
+  <p>Isso olha só a <strong>semana atual</strong> (as tarefas que aparecem nos dias, não o histórico) e procura tarefas <strong>quinzenais ou mensais</strong> que aparecem mais de uma vez — o que aconteceu de voltar/avançar semana repetidas vezes. Mantém uma cópia (a que já estiver concluída, se houver) e remove as extras. Tarefas semanais normais (que legitimamente aparecem várias vezes na semana) não são tocadas. Também limpa a fila de "tarefas adiadas" pra não duplicar de novo mais pra frente.</p>
+  <p>Isso roda uma vez só. Depois de usar, pode fechar essa página.</p>
+  <button id="btnPreview">1. Ver o que seria removido</button>
+  <button id="btnRun" disabled>2. Confirmar remoção</button>
+  <pre id="log">Aguardando...</pre>
+
+<script>
+const FIREBASE_DB_URL = "https://org-casa-4223f-default-rtdb.firebaseio.com";
+const DB_PATH = "/mutirao-da-casa.json";
+let cachedState = null;
+let plan = null; // { newAssignments, removedList, postponedBefore, postponedAfter }
+
+function buildPlan(state){
+  const infrequentIds = new Set(
+    (state.tasks||[]).filter(t => t.freq==='quinzenal' || t.freq==='mensal').map(t=>t.id)
+  );
+  const seen = new Set();
+  const removedList = [];
+  const dayNames = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+
+  const newAssignments = (state.assignments||[]).map((day,d)=>{
+    return (day||[]).filter(t=>{
+      if(!t.taskId || !infrequentIds.has(t.taskId)) return true; // não mexe fora de quinzenal/mensal
+      const key = t.taskId;
+      if(seen.has(key)){
+        removedList.push({ name: t.name, day: dayNames[d], done: t.done });
+        return false;
+      }
+      // se aparecer mais de uma cópia, prioriza manter a que já foi concluída
+      const others = day.filter(x=>x.taskId===key);
+      if(others.length>1 && !t.done && others.some(x=>x.done)){
+        removedList.push({ name: t.name, day: dayNames[d], done: t.done });
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  });
+
+  const postponedBefore = (state.postponed||[]).length;
+  const seenPostponed = new Set();
+  const newPostponed = (state.postponed||[]).filter(p=>{
+    if(seenPostponed.has(p.taskId)) return false;
+    seenPostponed.add(p.taskId);
+    return true;
+  });
+
+  return { newAssignments, removedList, postponedBefore, postponedAfter: newPostponed.length, newPostponed };
+}
+
+document.getElementById('btnPreview').addEventListener('click', async ()=>{
+  const log = document.getElementById('log');
+  log.textContent = 'Buscando dados...';
+  try{
+    const res = await fetch(FIREBASE_DB_URL + DB_PATH);
+    cachedState = await res.json();
+    if(!cachedState){ log.textContent = 'Não encontrei nenhum dado salvo.'; return; }
+    plan = buildPlan(cachedState);
+    if(plan.removedList.length===0 && plan.postponedBefore===plan.postponedAfter){
+      log.textContent = 'Não encontrei duplicatas. Nada a fazer — pode fechar essa página.';
+      return;
+    }
+    const lines = plan.removedList.map(r=>`• ${r.day} — ${r.name}${r.done?' (mantida a concluída)':''}`);
+    let msg = `Encontrei ${plan.removedList.length} cópia(s) extra(s) na semana atual:\n\n` + lines.join('\n');
+    if(plan.postponedBefore !== plan.postponedAfter){
+      msg += `\n\nTambém vou limpar a fila de "tarefas adiadas" (${plan.postponedBefore} → ${plan.postponedAfter} itens, removendo repetidos).`;
+    }
+    msg += `\n\nClique em "Confirmar remoção" pra aplicar.`;
+    log.textContent = msg;
+    document.getElementById('btnRun').disabled = false;
+  }catch(e){
+    log.textContent = '⚠ Erro: ' + e.message;
+  }
+});
+
+document.getElementById('btnRun').addEventListener('click', async ()=>{
+  const log = document.getElementById('log');
+  const btn = document.getElementById('btnRun');
+  btn.disabled = true;
+  if(!cachedState || !plan){ log.textContent = 'Clique primeiro em "Ver o que seria removido".'; return; }
+  try{
+    log.textContent = 'Salvando...';
+    cachedState.assignments = plan.newAssignments;
+    cachedState.postponed = plan.newPostponed;
+    const putRes = await fetch(FIREBASE_DB_URL + DB_PATH, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(cachedState)
+    });
+    if(!putRes.ok) throw new Error('HTTP ' + putRes.status);
+    log.textContent = `✅ Pronto! ${plan.removedList.length} cópia(s) extra(s) removida(s) da semana atual.\n\nPode fechar essa página agora.`;
+  }catch(e){
+    log.textContent = '⚠ Erro: ' + e.message + '\nTenta de novo, ou me avisa se persistir.';
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

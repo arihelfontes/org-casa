@@ -764,6 +764,7 @@ async function persist(){
   }catch(e){
     console.error('sync failed', e);
     showToast('⚠ Não consegui sincronizar — verifique sua internet.');
+    showOnPageError('Falha ao sincronizar', e && e.message || String(e));
     document.getElementById('autosaveWarning').style.display = 'block';
   }finally{
     saveInFlight = false;
@@ -1986,14 +1987,38 @@ document.getElementById('weatherCityInput').addEventListener('keydown', (e)=>{
   if(e.key==='Enter'){ e.preventDefault(); searchWeatherCity(); }
 });
 
+function showOnPageError(label, detail){
+  let box = document.getElementById('onPageDebugBox');
+  if(!box){
+    box = document.createElement('div');
+    box.id = 'onPageDebugBox';
+    box.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:99999;background:#3a1414;color:#ffb4b4;font-family:monospace;font-size:11px;padding:10px 12px;border-radius:10px;max-height:40vh;overflow:auto;box-shadow:0 4px 20px rgba(0,0,0,0.4);white-space:pre-wrap;';
+    document.body.appendChild(box);
+  }
+  const line = document.createElement('div');
+  line.style.cssText = 'margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.15);';
+  line.textContent = `[${new Date().toLocaleTimeString('pt-BR')}] ${label}: ${detail}`;
+  box.appendChild(line);
+  box.style.display = 'block';
+}
+
 window.addEventListener('error', (e)=>{
-  console.error('Erro capturado, tentando recuperar:', e.error || e.message);
+  const msg = (e.error && e.error.stack) || e.message || String(e);
+  console.error('Erro capturado, tentando recuperar:', msg);
+  showOnPageError('Erro', msg);
   try{
     migrateState();
     render();
   }catch(e2){
     console.error('Falha ao tentar recuperar:', e2);
+    showOnPageError('Falha ao recuperar', e2 && e2.message || String(e2));
   }
+});
+
+window.addEventListener('unhandledrejection', (e)=>{
+  const msg = (e.reason && (e.reason.stack || e.reason.message)) || String(e.reason);
+  console.error('Erro assíncrono não tratado:', msg);
+  showOnPageError('Erro assíncrono', msg);
 });
 
 load();

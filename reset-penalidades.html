@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reset único de penalidades</title>
+<style>
+  body{font-family:sans-serif;max-width:520px;margin:40px auto;padding:0 16px;line-height:1.5;color:#233229;}
+  button{background:#233229;color:#fff;border:none;padding:14px 20px;border-radius:10px;font-size:15px;margin-top:16px;cursor:pointer;}
+  button:disabled{opacity:0.5;}
+  pre{background:#f2f2ee;padding:12px;border-radius:8px;white-space:pre-wrap;font-size:13px;}
+</style>
+</head>
+<body>
+  <h2>Reset único de penalidades</h2>
+  <p>Isso remove do histórico apenas as entradas de <strong>penalidade</strong> (as tarefas atrasadas que descontaram coração), e limpa as marcações "ATRASADA"/"TRAVADA" que ficaram nas tarefas da semana atual. <strong>Não mexe</strong> nos corações que já foram ganhos de verdade.</p>
+  <p>Isso roda uma vez só. Depois de usar, pode fechar essa página e não vai precisar dela de novo.</p>
+  <button id="btnRun">Executar reset único</button>
+  <pre id="log">Aguardando...</pre>
+
+<script>
+const FIREBASE_DB_URL = "https://org-casa-4223f-default-rtdb.firebaseio.com";
+const DB_PATH = "/mutirao-da-casa.json";
+
+document.getElementById('btnRun').addEventListener('click', async ()=>{
+  const btn = document.getElementById('btnRun');
+  const log = document.getElementById('log');
+  btn.disabled = true;
+  log.textContent = 'Buscando dados atuais...';
+  try{
+    const res = await fetch(FIREBASE_DB_URL + DB_PATH);
+    const state = await res.json();
+    if(!state){ log.textContent = 'Não encontrei nenhum dado salvo.'; return; }
+
+    const beforeCount = (state.history||[]).length;
+    state.history = (state.history||[]).filter(h => !h.penalty);
+    const removedPenalties = beforeCount - state.history.length;
+
+    let clearedLate = 0;
+    (state.assignments||[]).forEach(day=>{
+      (day||[]).forEach(t=>{
+        if(t.late){ clearedLate++; }
+        delete t.late;
+        delete t.lateStreak;
+      });
+    });
+
+    log.textContent = `Salvando... (${removedPenalties} penalidade(s) removida(s), ${clearedLate} marcação(ões) de atraso limpa(s))`;
+
+    const putRes = await fetch(FIREBASE_DB_URL + DB_PATH, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(state)
+    });
+    if(!putRes.ok) throw new Error('HTTP ' + putRes.status);
+
+    log.textContent = `✅ Pronto!\n${removedPenalties} penalidade(s) removida(s) do histórico.\n${clearedLate} marcação(ões) de "atrasada/travada" limpa(s).\nOs corações já ganhos continuam intactos.\n\nPode fechar essa página agora.`;
+  }catch(e){
+    log.textContent = '⚠ Erro: ' + e.message + '\nTenta de novo, ou me avisa se persistir.';
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

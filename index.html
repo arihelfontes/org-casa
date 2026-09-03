@@ -1161,6 +1161,7 @@ function setHelper(t, helper){
   if(state.helpCount[helper] % 3 === 0){
     state.history.push({
       id: 'h' + Date.now() + '-' + Math.random().toString(36).slice(2,7),
+      ts: Date.now(),
       date: new Date().toISOString().slice(0,10),
       person: helper, effort: 1, minutes: 0, name: 'Bônus por ajudar 3x',
       bonus: true
@@ -1274,7 +1275,7 @@ function renderDays(){
       if(t.done){
         if(t.late) t.late = false; // concluída: sai do estado "atrasada" na hora, não fica travada com o selo
         const id = 'h' + Date.now() + '-' + Math.random().toString(36).slice(2,7);
-        state.history.push({ id, date: new Date().toISOString().slice(0,10), person: t.person, effort: t.effort, minutes: t.minutes, name: t.name });
+        state.history.push({ id, ts: Date.now(), date: new Date().toISOString().slice(0,10), person: t.person, effort: t.effort, minutes: t.minutes, name: t.name });
         t.historyId = id;
       } else if(!t.done && t.historyId){
         state.history = state.history.filter(h=>h.id!==t.historyId);
@@ -1811,6 +1812,7 @@ const WEEK_ARCHIVE_LIMIT = 15;
 
 document.getElementById('btnNewWeek').addEventListener('click', ()=>{
   const batchId = 'b' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
+  const historyMarker = Date.now(); // tudo criado a partir daqui pertence a essa transição em diante
   const pause = state.pause || [false,false];
   const leftovers = [];
   (state.assignments||[]).forEach(day=>{
@@ -1822,6 +1824,7 @@ document.getElementById('btnNewWeek').addEventListener('click', ()=>{
         if(!stuck && !pause[t.person]){
           state.history.push({
             id: 'h' + Date.now() + '-' + Math.random().toString(36).slice(2,7),
+            ts: Date.now(),
             date: new Date().toISOString().slice(0,10),
             person: t.person, effort: -t.effort, minutes: t.minutes, name: t.name,
             batchId, penalty: true
@@ -1836,7 +1839,8 @@ document.getElementById('btnNewWeek').addEventListener('click', ()=>{
   state.weekArchive.push({
     weekCounter: state.weekCounter,
     assignments: JSON.parse(JSON.stringify(state.assignments)),
-    historyBatchId: batchId
+    historyBatchId: batchId,
+    historyMarker
   });
   if(state.weekArchive.length > WEEK_ARCHIVE_LIMIT) state.weekArchive.shift();
 
@@ -1877,7 +1881,14 @@ document.getElementById('btnPrevWeek').addEventListener('click', ()=>{
   const snap = state.weekArchive.pop();
   state.weekCounter = snap.weekCounter;
   state.assignments = snap.assignments;
-  state.history = state.history.filter(h=>h.batchId !== snap.historyBatchId);
+  // remove do histórico tudo que foi criado a partir dessa transição em diante —
+  // não só as penalidades, mas também conclusões feitas na semana que está sendo desfeita.
+  // Entradas antigas sem timestamp (de antes dessa correção) são mantidas, por segurança.
+  if(snap.historyMarker){
+    state.history = state.history.filter(h => h.ts==null || h.ts < snap.historyMarker);
+  } else {
+    state.history = state.history.filter(h=>h.batchId !== snap.historyBatchId);
+  }
   render(); scheduleSave();
   showToast(`Voltou para a semana ${snap.weekCounter}. (${state.weekArchive.length} nível(is) de desfazer restantes)`);
 });

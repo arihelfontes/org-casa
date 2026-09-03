@@ -546,6 +546,7 @@ let state = {
   theme: { paper: "#EDEFE8", ink: "#233229", personColors: ["#3F7D6E", "#B15C68"] },
   history: [], // {id, date:'YYYY-MM-DD', person, effort, minutes, name, batchId?, penalty?} — pode ser negativo (penalidade)
   weekArchive: [], // pilha de snapshots para "Voltar semana" (multi-nível)
+  postponed: [], // tarefas quinzenais/mensais puladas nessa semana — voltam na próxima, sem penalidade
   pause: [false, false], // modo férias/pausa por pessoa (array de tamanho == número de pessoas)
   helpCount: [0, 0], // quantas vezes cada pessoa foi marcada como "ajudante" numa tarefa alheia
   cardStyle: 'default', // 'default' | 'notebook' | 'sticky' | 'torn'
@@ -732,12 +733,22 @@ let saving = false;
 function scheduleSave(){
   persist();
 }
+let saveInFlight = false;
+let savePending = false;
 async function persist(){
   if(NOT_CONFIGURED){
     showToast('⚠ Configure o Firebase antes de usar (veja instruções abaixo).');
     document.getElementById('autosaveWarning').style.display = 'block';
     return;
   }
+  if(saveInFlight){
+    // já tem um salvamento em andamento — marca que precisa salvar de novo assim que ele terminar,
+    // em vez de disparar outro PUT em paralelo (isso é o que causava um salvamento "velho"
+    // chegar depois de um "novo" e apagar dados por cima)
+    savePending = true;
+    return;
+  }
+  saveInFlight = true;
   try{
     const res = await fetch(FIREBASE_DB_URL + DB_PATH, {
       method: 'PUT',
@@ -750,6 +761,12 @@ async function persist(){
     console.error('sync failed', e);
     showToast('⚠ Não consegui sincronizar — verifique sua internet.');
     document.getElementById('autosaveWarning').style.display = 'block';
+  }finally{
+    saveInFlight = false;
+    if(savePending){
+      savePending = false;
+      persist(); // salva de novo com o estado mais atual, garantindo que nada fique pra trás
+    }
   }
 }
 async function load(){
@@ -779,7 +796,33 @@ async function load(){
   startPolling();
 }
 function migrateState(){
+  let repaired = false;
+  // proteção contra corrupção: nunca deixar a lista de pessoas ficar vazia/inválida,
+  // nem o tema perder a cor de fundo — se isso vier de um salvamento ruim (do próprio
+  // app ou da outra pessoa), reconstrói a partir do que der pra aproveitar em vez de
+  // deixar a tela sem os pins e com o fundo padrão.
+  if(!Array.isArray(state.people) || state.people.length===0){
+    state.people = ["Pessoa 1","Pessoa 2"];
+    repaired = true;
+  }
+  if(!state.theme || typeof state.theme !== 'object'){
+    state.theme = {};
+    repaired = true;
+  }
+  if(!state.theme.paper){ state.theme.paper = "#EDEFE8"; repaired = true; }
+  if(!state.theme.ink){ state.theme.ink = "#233229"; repaired = true; }
+  if(!Array.isArray(state.assignments) || state.assignments.length!==7){
+    state.assignments = [[],[],[],[],[],[],[]];
+    repaired = true;
+  }
+  if(repaired){
+    console.warn('Estado corrompido detectado e corrigido automaticamente.');
+    setTimeout(()=>showToast('⚠ Detectei e corrigi uma falha nos dados salvos. Se algo sumiu, use "Semana anterior" ou confira com a outra pessoa.'), 900);
+    setTimeout(()=>scheduleSave(), 1000);
+  }
+
   if(!Array.isArray(state.history)) state.history = [];
+  if(!Array.isArray(state.postponed)) state.postponed = [];
   if(!state.cardStyle) state.cardStyle = 'default';
   if(state.appTitle==null) state.appTitle = 'Mutirão da Casa';
   if(state.appSubtitle==null) state.appSubtitle = 'Tarefas espalhadas pela semana — sem sobrecarregar o fim de semana.';
@@ -1277,6 +1320,18 @@ function renderDays(){
       if(t && t.historyId){
         state.history = state.history.filter(h=>h.id!==t.historyId);
       }
+      // tarefas quinzenais/mensais não podem simplesmente sumir até a próxima ocorrência
+      // natural (semanas depois) — reagenda pra semana seguinte, sem penalidade/selo de atraso
+      if(t && !t.late){
+        const taskDef = state.tasks.find(x=>x.id===t.taskId);
+        const f = taskDef ? (freqMap[taskDef.freq] || freqMap['1x']) : null;
+        if(f && f.everyN > 1){
+          if(!Array.isArray(state.postponed)) state.postponed = [];
+          state.postponed.push({
+            taskId: t.taskId, name: t.name, effort: t.effort, minutes: t.minutes, person: t.person
+          });
+        }
+      }
       state.assignments[d].splice(i,1);
       renderDays(); renderStats(); scheduleSave();
     });
@@ -1508,11 +1563,11 @@ function renderStatsContent(){
     : (d)=> d.slice(0,4) === now.slice(0,4);
   const periodLabel = statsRange==='month' ? 'neste mês' : 'neste ano';
   const stats = computeHistoryStats(filterFn);
-  const grandTotal = Math.max(1, stats.reduce((s,x)=>s+x.effort,0));
+  const positiveTotal = stats.reduce((s,x)=>s+Math.max(0,x.effort),0);
   const leader = argmaxLeader(stats.map(s=>s.effort));
 
   content.innerHTML = stats.map((s,p)=>{
-    const pct = Math.round((s.effort / grandTotal) * 100);
+    const pct = positiveTotal>0 ? Math.round((Math.max(0,s.effort) / positiveTotal) * 100) : 0;
     const color = `var(--person${p})`;
     const isLeader = p===leader;
     return `
@@ -1790,12 +1845,22 @@ document.getElementById('btnNewWeek').addEventListener('click', ()=>{
       person: lt.person, done: false, late: true, lateStreak: lt.lateStreak
     });
   });
+  const postponedCount = (state.postponed||[]).length;
+  (state.postponed||[]).forEach(p=>{
+    placeLateTask({
+      taskId: p.taskId, name: p.name, effort: p.effort,
+      minutes: p.minutes, person: p.person, done: false
+      // sem late/lateStreak: reagendada por escolha, não penalizada nem marcada como atrasada
+    });
+  });
+  state.postponed = [];
 
   render(); scheduleSave();
   const stuckCount = leftovers.filter(l=>l.lateStreak>=3).length;
   let msg = leftovers.length
     ? `Nova semana — ${leftovers.length} tarefa${leftovers.length>1?'s':''} atrasada${leftovers.length>1?'s':''} levada${leftovers.length>1?'s':''} junto.`
     : 'Nova semana criada.';
+  if(postponedCount) msg += ` ${postponedCount} tarefa${postponedCount>1?'s':''} adiada${postponedCount>1?'s':''} volta${postponedCount>1?'m':''} essa semana.`;
   if(stuckCount) msg += ` ${stuckCount} está travada há semanas — vale conversar sobre ela.`;
   showToast(msg);
 });
